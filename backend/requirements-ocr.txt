@@ -1,0 +1,4 @@
+# Optional: enables text recognition for scanned PDFs and images.
+# Also requires the Tesseract binary on the host: https://github.com/tesseract-ocr/tesseract
+pytesseract>=0.3.13
+pillow>=10.4
