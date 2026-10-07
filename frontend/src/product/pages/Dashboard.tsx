@@ -52,7 +52,7 @@ export function DashboardPage() {
       />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <Stat label="Profile Completion" value={`${completion}%`} note={missingProfile.length ? `${missingProfile.length} details to add` : 'Complete'} to="/profile" />
+        <Stat label="Profile Completion" value={`${completion}%`} note={missingProfile.length ? `${missingProfile.length} ${missingProfile.length === 1 ? 'detail' : 'details'} to add` : 'Complete'} to="/profile" />
         <Stat label="Documents" value={String(data.documents.length)} note={`${processedDocs} processed`} to="/documents" />
         <Stat label="Applications" value={String(data.applications.length)} note={`${prepared} ready for submission`} to="/applications" />
         <Stat label="Needs Review" value={String(review)} note={review ? 'Resolve before approving' : 'Nothing waiting'} tone={review ? 'warning' : undefined} to="/validation" />
@@ -127,7 +127,7 @@ export function DashboardPage() {
               {[
                 { to: '/documents?upload=1', icon: FileUp, label: 'Upload Document', note: 'PDF, JPG or PNG' },
                 { to: '/applications/new', icon: FilePlus2, label: 'Create Application', note: 'Map a form to your profile' },
-                { to: '/profile', icon: UserRoundCheck, label: 'Complete Profile', note: missingProfile.length ? `${missingProfile.length} details missing` : 'All details added' },
+                { to: '/profile', icon: UserRoundCheck, label: 'Complete Profile', note: missingProfile.length ? `${missingProfile.length} ${missingProfile.length === 1 ? 'detail' : 'details'} missing` : 'All details added' },
               ].map(({ to, icon: Icon, label, note }) => (
                 <Link key={label} to={to} className="group flex items-center gap-3 rounded-[var(--radius-control)] border border-line px-3 py-2.5 hover:border-accent-line hover:bg-accent-soft/40">
                   <span className="flex size-9 items-center justify-center rounded-[var(--radius-control)] bg-sunken text-ink-2 group-hover:bg-accent-soft group-hover:text-accent">

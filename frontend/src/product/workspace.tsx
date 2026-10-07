@@ -188,14 +188,17 @@ function fromApiDocument(d: DocumentRecord): DocumentItem {
 }
 
 function fromApiMatch(m: FieldMatch, profile: ProfileField[]): ApplicationField {
+  // Only keys stored in the profile can be saved back to it (address, emergency contact etc. stay per application).
+  const profileKey = m.key && SECTION_FOR[m.key] ? m.key : null
   const conflict = m.needs_review ? profile.find((p) => p.key === m.key)?.conflict : undefined
   const section = m.key && SECTION_FOR[m.key] ? FORM_SECTION[SECTION_FOR[m.key]] : 'Additional Information'
   const base = {
     id: uid('f'),
     section,
     label: m.form_label,
-    required: true,
-    profileKey: m.key,
+    // Profile links are usually optional on real forms; everything else is treated as required.
+    required: !/linkedin|github|portfolio|website/i.test(m.form_label),
+    profileKey,
     candidates: conflict ? conflict.map((c) => ({ ...c, score: 1 })) : [],
   }
   if (conflict) {

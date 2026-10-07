@@ -47,6 +47,10 @@ CONCEPTS: dict[str, list[str]] = {
         "most recent position", "current position", "job title", "previous employment", "work history",
     ],
     "skills": ["skills", "technical skills", "key skills", "core competencies", "areas of expertise", "technologies"],
+    # Details FormPilot doesn't extract yet. Recognizing them stops look-alike labels
+    # ("Current Address" vs "Email Address") from being matched to the wrong field.
+    "address": ["address", "current address", "residential address", "permanent address", "mailing address", "home address", "city"],
+    "emergency_contact": ["emergency contact", "emergency contact number", "guardian contact", "next of kin"],
     "linkedin": ["linkedin", "linkedin profile", "linkedin url"],
     "github": ["github", "github profile", "github url", "code repository", "portfolio code"],
 }

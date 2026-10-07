@@ -16,7 +16,13 @@ export function summary(app: Application) {
   const issues = app.fields.filter(isIssue)
   const blocking = app.fields.filter(isBlocking)
   const warnings = app.fields.filter((f) => f.status === 'needs_review' || (f.status === 'missing' && !f.required))
-  const documents = app.fields.filter((f) => f.section === 'Documents' && f.value).length
+  // Distinct documents that completed answers came from ("A.pdf, B.pdf" counts both).
+  const documents = new Set(
+    app.fields
+      .filter((f) => isComplete(f) && f.source)
+      .flatMap((f) => f.source!.replace(/\s*\(confirmed by you\)/, '').split(', '))
+      .filter((s) => /\.\w+$/.test(s)),
+  ).size
   return { total, completed, verified, issues, blocking, warnings, documents, progress: progress(app) }
 }
 

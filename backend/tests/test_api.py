@@ -274,3 +274,10 @@ def test_resume_name_still_found_from_first_line():
     assert {f.key: f.value for f in extract_fields(resume)}["full_name"] == "Asha Rao"
     # A title line with no resume signals is not treated as a name.
     assert "full_name" not in {f.key for f in extract_fields("Data Structures Notes\nArrays and lists")}
+
+
+def test_address_is_not_matched_to_email():
+    assert classify("Current Address")[0] == "address"
+    assert classify("Residential Address")[0] == "address"
+    assert classify("Email Address")[0] == "email"
+    assert classify("Emergency Contact")[0] == "emergency_contact"
