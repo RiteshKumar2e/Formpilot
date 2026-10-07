@@ -58,36 +58,41 @@ function ResolveFragment() {
   )
 }
 
-function FillFragment() {
+function ApproveFragment() {
   return (
     <div className="rounded-[var(--radius-control)] border border-line bg-field p-3">
-      <p className="text-[12.5px] text-subtle">Latest degree earned</p>
-      <p className="mt-1 text-[14px] text-ink">B.Tech in Computer Science</p>
-      <p className="mt-0.5 truncate font-mono text-[11px] text-subtle">Resume.pdf, Degree_Certificate.pdf · 90%</p>
+      <div className="flex items-center justify-between text-[12.5px]">
+        <span className="font-medium text-ink">Application Ready</span>
+        <Status tone="success" className="text-[12px]">
+          18/18 fields
+        </Status>
+      </div>
+      <p className="mt-1 text-[12px] text-subtle">0 critical errors · 4 documents verified</p>
+      <div className="mt-2.5 rounded-[var(--radius-control)] bg-accent px-3 py-1.5 text-center text-[12.5px] font-medium text-white">Approve &amp; Continue</div>
     </div>
   )
 }
 
 const STEPS: { title: string; body: string; visual: ReactNode }[] = [
   {
-    title: 'Upload',
-    body: 'Add your resume, certificates and transcripts. Each file is encrypted before it is stored.',
+    title: 'Upload documents',
+    body: 'Add your resume, certificates and transcripts once. Each file is encrypted before it is stored.',
     visual: <UploadFragment />,
   },
   {
-    title: 'Extract',
-    body: 'FormPilot reads every document and pulls out names, contact details, dates, education and skills.',
+    title: 'Build your profile',
+    body: 'FormPilot extracts names, dates, education, experience and skills into one reusable profile.',
     visual: <ExtractFragment />,
   },
   {
-    title: 'Resolve',
-    body: 'When documents disagree, you choose the right value once. FormPilot remembers it.',
+    title: 'Map & validate',
+    body: 'Every form field is matched to your profile by meaning. Missing or conflicting details are flagged.',
     visual: <ResolveFragment />,
   },
   {
-    title: 'Fill',
-    body: 'Paste a form’s field labels. Each answer comes back with the document it came from.',
-    visual: <FillFragment />,
+    title: 'Review & approve',
+    body: 'You check every answer and its source, then approve. Nothing is submitted without you.',
+    visual: <ApproveFragment />,
   },
 ]
 
@@ -98,7 +103,7 @@ export function HowItWorks() {
         <SectionHeader
           id="how-title"
           eyebrow="How it works"
-          title="From documents to answers in four steps."
+          title="From documents to a ready application."
           description="You upload and you decide. FormPilot does the reading, matching and cross-checking in between."
         />
         <ol className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">

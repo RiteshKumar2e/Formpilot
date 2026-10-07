@@ -8,6 +8,8 @@ import { Alert, PasswordField, TextField } from '../components/ui/FormControls'
 import { Button } from '../components/ui/Button'
 import { Honeypot } from '../components/ui/Honeypot'
 import { Container } from '../components/ui/primitives'
+import { FlaskConical } from 'lucide-react'
+import { useWorkspace } from '../product/workspace'
 
 function AuthShell({ title, subtitle, children, aside }: { title: string; subtitle: ReactNode; children: ReactNode; aside?: ReactNode }) {
   return (
@@ -34,9 +36,37 @@ const ONBOARDING = [
   { title: 'Review your profile', body: 'Confirm what FormPilot extracted and resolve conflicts.' },
 ]
 
+/** Lets judges and visitors explore the product without an account. */
+function DemoEntry() {
+  const { startDemo } = useWorkspace()
+  const navigate = useNavigate()
+  return (
+    <div className="mt-6">
+      <div className="flex items-center gap-3 text-[13px] text-subtle">
+        <span className="h-px flex-1 bg-line" />
+        or
+        <span className="h-px flex-1 bg-line" />
+      </div>
+      <Button
+        variant="secondary"
+        className="mt-6 w-full"
+        onClick={() => {
+          startDemo()
+          navigate('/dashboard')
+        }}
+      >
+        <FlaskConical className="size-4" aria-hidden />
+        Start Product Demo
+      </Button>
+      <p className="mt-2 text-center text-[13px] text-subtle">Explore with a sample profile. No account needed.</p>
+    </div>
+  )
+}
+
 export function GetStartedPage() {
   usePageMeta({ title: 'Get Started', path: '/get-started', description: 'Create your FormPilot account and build a reusable profile from your documents.' })
   const { user, loading, setUser } = useAuth()
+  const { enterAccount, mode } = useWorkspace()
   const navigate = useNavigate()
   const [values, setValues] = useState({ full_name: '', email: '', password: '' })
   const [agreed, setAgreed] = useState(false)
@@ -45,7 +75,7 @@ export function GetStartedPage() {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
-  if (!loading && user) return <Navigate to="/app" replace />
+  if (!loading && user && mode === 'account') return <Navigate to="/dashboard" replace />
 
   const validate = () => {
     const next = {
@@ -66,7 +96,8 @@ export function GetStartedPage() {
     try {
       const created = await api.auth.signUp({ ...values, email: values.email.trim(), full_name: values.full_name.trim(), website })
       setUser(created)
-      navigate('/app')
+      enterAccount(created)
+      navigate('/dashboard')
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
     } finally {
@@ -80,7 +111,7 @@ export function GetStartedPage() {
       subtitle={
         <>
           Already have one?{' '}
-          <Link to="/signin" className="font-medium text-accent underline underline-offset-2">
+          <Link to="/login" className="font-medium text-accent underline underline-offset-2">
             Sign in
           </Link>
         </>
@@ -165,6 +196,7 @@ export function GetStartedPage() {
           {submitting ? 'Creating account…' : 'Create account'}
         </Button>
       </form>
+      <DemoEntry />
     </AuthShell>
   )
 }
@@ -172,15 +204,16 @@ export function GetStartedPage() {
 export function SignInPage() {
   usePageMeta({ title: 'Sign In', path: '/signin', description: 'Sign in to your FormPilot workspace.' })
   const { user, loading, setUser } = useAuth()
+  const { enterAccount, mode } = useWorkspace()
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const next = params.get('next')?.startsWith('/') ? params.get('next')! : '/app'
+  const next = params.get('next')?.startsWith('/') ? params.get('next')! : '/dashboard'
   const [values, setValues] = useState({ email: '', password: '' })
   const [errors, setErrors] = useState<Record<string, string | undefined>>({})
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
-  if (!loading && user) return <Navigate to={next} replace />
+  if (!loading && user && mode === 'account') return <Navigate to={next} replace />
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -193,7 +226,9 @@ export function SignInPage() {
     if (Object.values(nextErrors).some(Boolean)) return
     setSubmitting(true)
     try {
-      setUser(await api.auth.signIn({ email: values.email.trim(), password: values.password }))
+      const signedIn = await api.auth.signIn({ email: values.email.trim(), password: values.password })
+      setUser(signedIn)
+      enterAccount(signedIn)
       navigate(next)
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
@@ -208,7 +243,7 @@ export function SignInPage() {
       subtitle={
         <>
           New to FormPilot?{' '}
-          <Link to="/get-started" className="font-medium text-accent underline underline-offset-2">
+          <Link to="/signup" className="font-medium text-accent underline underline-offset-2">
             Create an account
           </Link>
         </>
@@ -238,6 +273,7 @@ export function SignInPage() {
           {submitting ? 'Signing in…' : 'Sign In'}
         </Button>
       </form>
+      <DemoEntry />
     </AuthShell>
   )
 }

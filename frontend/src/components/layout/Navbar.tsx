@@ -1,23 +1,29 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Logo } from '../ui/Logo'
 import { Button } from '../ui/Button'
 import { CloseIcon, MenuIcon } from '../ui/Icons'
 import { Container } from '../ui/primitives'
 import { useAuth } from '../../hooks/useAuth'
+import { useWorkspace } from '../../product/workspace'
 
 export const NAV_LINKS = [
-  { label: 'Home', to: '/' },
-  { label: 'About', to: '/about' },
-  { label: 'How it works', to: '/#how-it-works' },
-  { label: 'Features', to: '/#features' },
-  { label: 'Contact', to: '/#contact' },
+  { label: 'Product', to: '/#product' },
+  { label: 'How It Works', to: '/how-it-works' },
+  { label: 'Features', to: '/features' },
+  { label: 'Security', to: '/security' },
 ]
 
 export function Navbar() {
   const [open, setOpen] = useState(false)
   const location = useLocation()
   const { user } = useAuth()
+  const { mode, startDemo } = useWorkspace()
+  const navigate = useNavigate()
+  const openDemo = () => {
+    startDemo()
+    navigate('/dashboard')
+  }
 
   useEffect(() => setOpen(false), [location.pathname, location.hash])
 
@@ -34,7 +40,8 @@ export function Navbar() {
     setOpen(false)
   }
 
-  const primary = user ? { to: '/app', label: 'Open workspace' } : { to: '/get-started', label: 'Get started' }
+  const inApp = mode === 'demo' || (mode === 'account' && user)
+  const primary = inApp ? { to: '/dashboard', label: 'Open dashboard' } : { to: '/signup', label: 'Get Started' }
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-canvas/95 backdrop-blur-sm">
@@ -60,10 +67,15 @@ export function Navbar() {
         </nav>
 
         <div className="hidden items-center gap-6 lg:flex">
-          {!user && (
-            <Link to="/signin" className="text-[15px] text-ink-2 hover:text-ink">
-              Sign in
-            </Link>
+          {!inApp && (
+            <>
+              <button type="button" onClick={openDemo} className="text-[15px] text-accent hover:underline">
+                Try Demo
+              </button>
+              <Link to="/login" className="text-[15px] text-ink-2 hover:text-ink">
+                Sign In
+              </Link>
+            </>
           )}
           <Button to={primary.to} size="sm">
             {primary.label}
@@ -93,10 +105,10 @@ export function Navbar() {
                   </Link>
                 </li>
               ))}
-              {!user && (
+              {!inApp && (
                 <li>
-                  <Link to="/signin" className="flex py-3.5 text-[17px] text-ink">
-                    Sign in
+                  <Link to="/login" className="flex py-3.5 text-[17px] text-ink">
+                    Sign In
                   </Link>
                 </li>
               )}
@@ -105,6 +117,11 @@ export function Navbar() {
           <Button to={primary.to} className="mt-4 w-full">
             {primary.label}
           </Button>
+          {!inApp && (
+            <Button variant="secondary" className="mt-2 w-full" onClick={openDemo}>
+              Start Product Demo
+            </Button>
+          )}
         </Container>
       </div>
     </header>
