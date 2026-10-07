@@ -98,7 +98,7 @@ const STEPS: { title: string; body: string; visual: ReactNode }[] = [
 
 export function HowItWorks() {
   return (
-    <Section id="how-it-works" labelledBy="how-title" className="border-t border-line bg-sunken/50">
+    <Section id="how-it-works" labelledBy="how-title" className="bg-band">
       <Container>
         <SectionHeader
           id="how-title"

@@ -16,7 +16,7 @@ export function FinalCTA() {
           <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
             <Link
               to="/signup"
-              className="inline-flex h-12 items-center justify-center rounded-[var(--radius-control)] bg-white px-6 text-[16px] font-medium text-accent hover:bg-white/90 focus-visible:outline-white"
+              className="inline-flex h-12 items-center justify-center rounded-[var(--radius-control)] bg-highlight px-6 text-[16px] font-medium text-ink hover:bg-highlight-hover focus-visible:outline-white"
             >
               Get Started
             </Link>

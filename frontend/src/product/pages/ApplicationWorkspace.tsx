@@ -324,7 +324,7 @@ export function ApplicationWorkspacePage() {
             {f.label}
             {f.required && <span className="text-danger" aria-label="required"> *</span>}
           </span>
-          <FieldStatusBadge status={f.status} />
+          <FieldStatusBadge status={f.status} required={f.required} />
         </div>
         <div className={cn('mt-2 min-h-9 rounded-[var(--radius-control)] border px-3 py-2 text-[14px]', f.value ? 'border-line bg-field text-ink' : 'border-dashed border-line-strong bg-canvas text-subtle')}>
           {f.value ? <span className="break-words">{f.value}</span> : f.status === 'conflict' ? 'Choose between conflicting values' : 'Not filled'}

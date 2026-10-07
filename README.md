@@ -1,31 +1,132 @@
+<div align="center">
+
+<img src="frontend/public/favicon.svg" width="64" height="64" alt="FormPilot logo" />
+
 # FormPilot
 
-**One profile. Every application.**
+**One Profile. Every Application.**
 
-FormPilot turns your resume and certificates into a verified profile, answers application form fields from it, and shows which document every answer came from. When documents disagree, it asks you which value is right. It never submits a form for you.
+Upload your documents once. FormPilot extracts your details into a verified profile, maps them to any application form by meaning, flags conflicts between documents, and waits for your approval before anything is used.
 
+![React](https://img.shields.io/badge/React-19-0e0e62?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-0e0e62?logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-0e0e62?logo=tailwindcss&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-Python_3.10+-0e0e62?logo=fastapi&logoColor=white)
+![Tests](https://img.shields.io/badge/backend_tests-25_passing-1f7a4d)
+![License: MIT](https://img.shields.io/badge/license-MIT-ffc72c)
+
+</div>
+
+<br />
+
+![FormPilot application workspace](frontend/public/screens/workspace.jpg)
+
+<p align="center"><sub>The application workspace: every form field with its status, and the assistant showing the source document, confidence and reasoning for the selected answer.</sub></p>
+
+---
+
+## Contents
+
+- [The problem](#the-problem)
+- [What FormPilot does](#what-formpilot-does)
+- [Screenshots](#screenshots)
+- [How it works](#how-it-works)
+- [Tech stack](#tech-stack)
+- [Getting started](#getting-started)
+- [Configuration](#configuration)
+- [App pages](#app-pages)
+- [API reference](#api-reference)
+- [Project structure](#project-structure)
+- [Testing](#testing)
+- [Security](#security)
+- [Deployment](#deployment)
+- [Roadmap](#roadmap)
+- [Contact](#contact)
+- [License](#license)
+
+## The problem
+
+Students, job seekers and professionals type the same facts into portal after portal: name, date of birth, degree, institution, experience, skills. Every form words its questions differently ("Name of applicant", "Full legal name", "Candidate name"), so copy and paste never quite works, and a single mistyped date can put an application at risk. The information already exists in the documents people have. It just isn't reusable.
+
+## What FormPilot does
+
+| | |
+| --- | --- |
+| **Document extraction** | Reads PDFs (and scanned images when OCR is enabled) and extracts name, contact details, date of birth, degree, institution, graduation year, experience, skills and profile links, each with a confidence score. |
+| **Reusable profile** | Merges details from all your documents into one profile. Every value lists the documents it came from. |
+| **Conflict detection** | When two documents disagree (for example, two different dates of birth), FormPilot shows both values with their sources and asks you to choose. Your choice is saved and applied everywhere. |
+| **Semantic field mapping** | Matches free-text form labels to your profile by meaning, so "Latest degree earned" and "Highest qualification" get the same answer. |
+| **Validation** | Before approval, every application is checked for conflicts, missing required fields and low-confidence matches, each with a one-click fix. |
+| **Human approval** | You review every answer and approve explicitly. FormPilot never submits anything; approval marks an application *Ready for Submission*. |
+
+## Screenshots
+
+| Dashboard | Application workspace |
+| --- | --- |
+| ![Dashboard](frontend/public/screens/dashboard.jpg) | ![Workspace](frontend/public/screens/workspace.jpg) |
+
+Real captures of the app with sample documents. Mobile versions are in [`frontend/public/screens/`](frontend/public/screens/).
+
+## How it works
+
+```mermaid
+flowchart LR
+    A[Upload documents] --> B[Extract details]
+    B --> C[Build profile]
+    C --> D{Documents agree?}
+    D -- No --> E[You choose the value]
+    E --> C
+    D -- Yes --> F[Map form fields]
+    F --> G[Validate]
+    G --> H[You review and approve]
+    H --> I[Ready for Submission]
 ```
-frontend/   React + Vite + TypeScript + Tailwind CSS
-backend/    Python FastAPI + SQLAlchemy (SQLite locally, PostgreSQL in production)
+
+1. **Upload.** PDF, JPG or PNG up to 10 MB. The file type is checked from its bytes, and the file is encrypted before it is written to disk.
+2. **Extract.** The PDF text layer (or OCR text) is parsed into structured fields with confidence scores. Ambiguous values, such as `12/05/2003`, are flagged for review.
+3. **Build the profile.** Values from all documents are merged. Identical values list every source; different values become a conflict.
+4. **Map.** Each form label is classified against a table of known phrasings using token overlap and character-trigram similarity, then answered from the profile.
+5. **Validate and approve.** Conflicts and missing required fields block approval until resolved. Optional fields (such as GitHub) never block.
+
+## Tech stack
+
+| Layer | Technology |
+| --- | --- |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS 4, React Router 7, Framer Motion, Lucide icons |
+| Backend | Python 3.10+, FastAPI, SQLAlchemy 2, Pydantic 2 |
+| Database | SQLite for local development, PostgreSQL in production |
+| Documents | pypdf for text extraction, optional Tesseract OCR, Fernet (cryptography) for encryption at rest |
+| Auth | scrypt password hashing, JWT session in an httpOnly cookie |
+| Testing | pytest with the FastAPI TestClient |
+
+## Getting started
+
+### Prerequisites
+
+- Python 3.10 or later
+- Node.js 20 or later
+
+### 1. Clone
+
+```bash
+git clone https://github.com/RiteshKumar2e/Formpilot.git
+cd Formpilot
 ```
 
-## Run locally
-
-**Backend** (port 8000)
+### 2. Backend (port 8000)
 
 ```bash
 cd backend
-python -m virtualenv .venv          # or: python -m venv .venv
-.venv/Scripts/activate              # macOS/Linux: source .venv/bin/activate
+python -m venv .venv                 # or: python -m virtualenv .venv
+.venv\Scripts\activate               # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env                 # optional for local development
 uvicorn app.main:app --reload --port 8000
 ```
 
-If port 8000 is already taken, Windows reports `WinError 10013`. Stop the other process or use `--port 8001` (and update the proxy target in `frontend/vite.config.ts`).
+Interactive API docs: http://localhost:8000/api/docs (disabled in production).
 
-API docs: http://localhost:8000/api/docs (disabled in production).
-
-**Frontend** (port 5173)
+### 3. Frontend (port 5173)
 
 ```bash
 cd frontend
@@ -33,63 +134,192 @@ npm install
 npm run dev
 ```
 
-The Vite dev server proxies `/api` to the backend.
+Open http://localhost:5173, create an account, and upload a resume or certificate. The Vite dev server proxies `/api` to the backend, so no extra configuration is needed locally.
 
-## Tests
+> **Windows tip:** `WinError 10013` when starting uvicorn means port 8000 is already in use. Stop the other process, or use `--port 8001` and update the proxy target in `frontend/vite.config.ts`.
+
+### Optional: OCR for scanned documents
 
 ```bash
-cd backend && .venv/Scripts/python -m pytest -q    # 25 tests
-cd frontend && npm run build                       # type-checks and builds
+pip install -r requirements-ocr.txt
 ```
 
-## The product
-
-Sign up, upload your documents, and FormPilot builds your profile on the FastAPI backend. Documents, profile, conflicts and field mapping are stored in your account. Applications are saved in the browser until an applications API exists (the UI says so).
-
-| Route | What it shows |
-| --- | --- |
-| `/dashboard` | Profile completion, documents, applications, quick actions, activity |
-| `/profile` | Every profile value with its source document and verification; add missing details or fix values |
-| `/documents` | Category filters, document detail drawer, upload with processing stages and errors |
-| `/applications`, `/applications/new` | Status filters; create from a type, template or pasted field list |
-| `/applications/:id` | Workspace: structure, mapped form, assistant with source, confidence and reasoning |
-| `/mapping` | Field → match → source → confidence for every field |
-| `/validation` | Conflicts and missing information, each with a fix |
-| `/applications/:id/review` | Final review, explicit approval, "Ready for Submission" success state |
-| `/activity`, `/settings` | Timeline of everything that happened; account, security, notifications, privacy |
-
-Code lives in `frontend/src/product/`: `types.ts` (domain model), `workspace.tsx` (API calls and state), `templates.ts` (typical fields per application type), `selectors.ts`, and `pages/`.
-
-Nothing is ever submitted: approval marks an application "Ready for Submission".
-
-## What's built on the backend
-
-| Area | Today |
-| --- | --- |
-| Accounts | scrypt-hashed passwords, 12-hour httpOnly session cookie, account deletion |
-| Documents | PDF/JPG/PNG up to 10 MB, type sniffed from bytes, encrypted at rest (Fernet) |
-| Extraction | PDF text layer + rules: name, email, phone, date of birth, degree, institution, graduation year, experience, skills, LinkedIn, GitHub |
-| OCR | Optional (`requirements-ocr.txt` + Tesseract). Without it, images are marked *needs review* |
-| Conflicts | Values that differ across documents are surfaced; your choice is saved |
-| Field matching | Phrasing tables + token/trigram similarity (`services/mapping.py`) |
-| Abuse protection | Per-IP rate limits on sign-up, sign-in, contact and uploads; honeypot fields |
-| Transport | HTTPS redirect + HSTS in production (`ENFORCE_HTTPS`), security headers |
-
-**Planned, not built:** LLM-assisted extraction, embeddings with vector search (the `Embedder` interface in `services/mapping.py`), an applications API, form-PDF parsing, and filling forms on third-party sites.
+Also install the [Tesseract](https://github.com/tesseract-ocr/tesseract) binary. Without it, images upload successfully but are marked *needs review* with no details extracted.
 
 ## Configuration
 
-- `frontend/src/config/site.ts`: contact email, GitHub and LinkedIn.
-- `frontend/.env`: `VITE_API_BASE_URL`, and optional Plausible analytics (`VITE_PLAUSIBLE_DOMAIN`). Analytics loads only after a visitor accepts it in the cookie banner.
-- `backend/.env`: see `.env.example`. Production refuses to start without `SECRET_KEY`, `FILE_ENCRYPTION_KEY`, `COOKIE_SECURE=true` and HTTPS enforcement. Set `TRUST_PROXY_HEADERS=true` behind a reverse proxy.
-- Hosting: `frontend/vercel.json` and `frontend/public/_redirects` + `_headers` (Netlify) provide SPA routing, HSTS and caching.
-- Replace `https://formpilot.app` in `index.html`, `robots.txt`, `sitemap.xml` and `usePageMeta.ts` with your domain.
+### Backend (`backend/.env`)
 
-## Before launch
+| Variable | Default | Description |
+| --- | --- | --- |
+| `ENVIRONMENT` | `development` | Set to `production` to enforce production checks. |
+| `SECRET_KEY` | dev-only key | Signs session tokens. **Required in production.** |
+| `FILE_ENCRYPTION_KEY` | derived in dev | Fernet key for encrypting uploads. **Required in production.** |
+| `DATABASE_URL` | `sqlite:///./formpilot.db` | e.g. `postgresql+psycopg://user:pass@host:5432/formpilot` |
+| `STORAGE_DIR` | `./storage` | Where encrypted uploads are stored. |
+| `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated allowed frontend origins. |
+| `COOKIE_SECURE` | `false` | Must be `true` in production (HTTPS only). |
+| `ENFORCE_HTTPS` | on in production | Redirects HTTP to HTTPS and sends HSTS. |
+| `TRUST_PROXY_HEADERS` | `false` | Trust `X-Forwarded-*` when behind a reverse proxy you control. |
+| `RATE_LIMIT_ENABLED` | `true` | Per-IP limits on sign-up, sign-in, contact and uploads. |
+| `SESSION_HOURS` | `12` | Session lifetime. |
 
-- The Privacy Policy and Terms of Service are **drafts**. Highlighted placeholders need the operator's legal name, address, hosting region, retention periods and governing law, followed by legal review.
-- The screenshots in `public/screens/` are real captures of the product with sample documents. Retake them if the UI changes.
+Generate keys:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"                               # SECRET_KEY
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" # FILE_ENCRYPTION_KEY
+```
+
+In production the API refuses to start without `SECRET_KEY`, `FILE_ENCRYPTION_KEY`, `COOKIE_SECURE=true` and HTTPS enforcement.
+
+### Frontend (`frontend/.env`)
+
+| Variable | Description |
+| --- | --- |
+| `VITE_API_BASE_URL` | API origin. Leave empty to use the dev proxy. |
+| `VITE_PLAUSIBLE_DOMAIN` | Optional. Enables cookie-free Plausible analytics, loaded only after the visitor accepts it in the cookie banner. |
+| `VITE_PLAUSIBLE_SRC` | Optional. Custom Plausible script URL for self-hosting. |
+
+Only `VITE_`-prefixed variables reach the browser. No secrets are shipped to the frontend. Contact details shown on the site live in [`frontend/src/config/site.ts`](frontend/src/config/site.ts).
+
+## App pages
+
+| Route | What it shows |
+| --- | --- |
+| `/dashboard` | Profile completion, documents, applications, quick actions and recent activity |
+| `/profile` | Every profile value with its source document and verification; add missing details or fix values |
+| `/documents` | Category filters, a detail drawer with extracted fields and confidence, and upload with clear error states |
+| `/applications`, `/applications/new` | Status filters; create an application from a type, a template or a pasted list of field labels |
+| `/applications/:id` | Workspace: application structure, the mapped form, and an assistant with source, confidence and reasoning |
+| `/mapping` | Field → match → source → confidence for every field of an application |
+| `/validation` | Conflicts and missing information, each with a fix |
+| `/applications/:id/review` | Final review, explicit approval, and the *Ready for Submission* confirmation |
+| `/activity`, `/settings` | A timeline of everything that happened; account, security, notifications and privacy |
+
+Applications are currently saved in the browser per account; documents, the profile, conflicts and mapping live on the backend.
+
+## API reference
+
+All endpoints are under `/api`. Authenticated endpoints use the `fp_session` httpOnly cookie.
+
+| Method | Endpoint | Auth | Description |
+| --- | --- | :---: | --- |
+| `POST` | `/auth/signup` | | Create an account and start a session |
+| `POST` | `/auth/signin` | | Sign in |
+| `POST` | `/auth/signout` | | End the session |
+| `GET` | `/auth/session` | | Current user, or `null` (always 200) |
+| `GET` | `/auth/me` | ✓ | Current user |
+| `DELETE` | `/auth/me` | ✓ | Delete the account, documents and extracted data |
+| `GET` | `/documents` | ✓ | List documents with extracted details |
+| `POST` | `/documents` | ✓ | Upload and process a document (multipart `file`) |
+| `DELETE` | `/documents/{id}` | ✓ | Delete a document and its extracted details |
+| `GET` | `/profile` | ✓ | Merged profile, conflicts and completeness |
+| `POST` | `/profile/conflicts/resolve` | ✓ | Choose or set the value for a profile field |
+| `POST` | `/mapping` | ✓ | Map form field labels to profile values |
+| `POST` | `/contact` | | Send a contact message |
+| `GET` | `/health` | | Health check |
+
+Example:
+
+```bash
+curl -X POST http://localhost:8000/api/mapping \
+  -H "Content-Type: application/json" \
+  -b "fp_session=<token>" \
+  -d '{"fields": ["Name of applicant", "Latest degree earned", "Mobile number"]}'
+```
+
+## Project structure
+
+```
+Formpilot/
+├── backend/
+│   ├── app/
+│   │   ├── main.py              # App setup, CORS, security headers, HTTPS redirect
+│   │   ├── config.py            # Settings from environment, production checks
+│   │   ├── models.py            # SQLAlchemy models
+│   │   ├── schemas.py           # Pydantic request and response schemas
+│   │   ├── security.py          # scrypt hashing, JWT sessions, file encryption
+│   │   ├── ratelimit.py         # Per-IP sliding-window rate limits
+│   │   ├── routers/             # auth, documents, profile and mapping, contact
+│   │   └── services/
+│   │       ├── extraction.py    # PDF/OCR text and rule-based field extraction
+│   │       ├── profile.py       # Merging values and detecting conflicts
+│   │       ├── mapping.py       # Form-label classification and matching
+│   │       ├── fields.py        # Profile fields and known phrasings
+│   │       └── storage.py       # Encrypted file storage
+│   ├── tests/                   # pytest suite
+│   └── requirements.txt
+└── frontend/
+    ├── public/                  # Favicon, fonts, screenshots, robots.txt, sitemap.xml
+    └── src/
+        ├── components/          # Layouts, landing sections, UI primitives
+        ├── pages/               # Landing, auth, about, contact, legal, 404
+        ├── product/             # The signed-in app
+        │   ├── workspace.tsx    # API calls and app state
+        │   ├── selectors.ts     # Progress, validation and status logic
+        │   ├── templates.ts     # Typical fields per application type
+        │   └── pages/           # Dashboard, Profile, Documents, Applications, ...
+        ├── lib/                 # API client, analytics, validation helpers
+        └── index.css            # Design tokens: colors, radii, shadows
+```
+
+## Testing
+
+```bash
+# Backend: 25 tests covering auth, uploads, extraction, conflicts, mapping, rate limits and HTTPS
+cd backend
+.venv\Scripts\python -m pytest -q
+
+# Frontend: type-check and production build
+cd frontend
+npm run build
+```
+
+## Security
+
+- **Encryption at rest:** uploaded files are encrypted with Fernet before they are written to disk.
+- **Passwords:** hashed with scrypt; never stored in plain text.
+- **Sessions:** JWT in an httpOnly, SameSite=Lax cookie that page scripts can't read, with a 12-hour expiry.
+- **Isolation:** every document and profile request is scoped to the signed-in account.
+- **Upload validation:** the file type is detected from the file's bytes, not its name, with a 10 MB limit.
+- **Abuse protection:** per-IP rate limits on sign-up, sign-in, contact and uploads, and honeypot fields on public forms.
+- **Transport:** HTTPS redirect and HSTS in production, plus `X-Content-Type-Options`, `X-Frame-Options` and `Referrer-Policy` headers.
+- **Deletion:** deleting a document removes its file and extracted details; deleting an account removes everything.
+
+Found a security issue? Please email the address under [Contact](#contact) rather than opening a public issue.
+
+## Deployment
+
+- **Frontend:** any static host. [`vercel.json`](frontend/vercel.json), and [`_redirects`](frontend/public/_redirects) with [`_headers`](frontend/public/_headers) for Netlify, provide SPA routing, HSTS and asset caching.
+- **Backend:** any host that runs Python (Render, Railway, or a VM behind Nginx). Use PostgreSQL, set the production variables above, and set `TRUST_PROXY_HEADERS=true` behind a proxy.
+- **Domain:** replace `https://formpilot.app` in `index.html`, `robots.txt`, `sitemap.xml` and `usePageMeta.ts` with your own.
+- **Before launch:** the Privacy Policy and Terms of Service in the app are drafts. Their highlighted placeholders need the operator's legal name, address, hosting region, retention periods and governing law, followed by a legal review.
+
+## Roadmap
+
+Everything described above is built and tested. Next:
+
+- [ ] Applications API (applications are currently saved in the browser)
+- [ ] Password reset by email and two-factor authentication
+- [ ] LLM-assisted extraction for documents with unusual layouts
+- [ ] Embeddings and vector search for matching (the `Embedder` interface in `services/mapping.py`)
+- [ ] Reading fields directly from PDF application forms
+- [ ] Filling forms on third-party sites, with approval for every submission
+- [ ] Imports from Google Drive and DigiLocker
 
 ## Design
 
-Warm paper background (`#f6f5f1`), near-black ink, one cobalt accent (`#2b45b8`). Green, amber and red are used only for status. Instrument Sans (SIL OFL, self-hosted in `public/fonts/`) plus the system monospace for data. Tokens live in `frontend/src/index.css`.
+Navy (`#0e0e62`) for primary actions and headings, warm yellow (`#ffc72c`) for the main call to action, beige (`#f8eee3`) section bands and lavender (`#eef1fd`) panels. Green, amber and red are used only for status. Type is Instrument Sans (SIL Open Font License, self-hosted in `frontend/public/fonts/`) with the system monospace for data. All tokens live in [`frontend/src/index.css`](frontend/src/index.css).
+
+## Contact
+
+**Ritesh Kumar**
+
+- Email: [riteshkumar90359@gmail.com](mailto:riteshkumar90359@gmail.com)
+- GitHub: [@RiteshKumar2e](https://github.com/RiteshKumar2e)
+- LinkedIn: [riteshkumar-tech](https://www.linkedin.com/in/riteshkumar-tech)
+
+## License
+
+Released under the [MIT License](LICENSE). Copyright (c) 2026 Ritesh Kumar.

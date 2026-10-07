@@ -29,24 +29,34 @@
   --font-sans: "Instrument Sans", "Instrument Sans Fallback", ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", Menlo, Consolas, monospace;
 
-  /* Surfaces: warm white page, white cards, thin warm-gray borders. */
-  --color-canvas: #f7f6f3;
-  --color-sunken: #f0eee9;
+  /* Surfaces: white pages, beige feature bands, lavender panels, navy-tinted borders. */
+  --color-canvas: #f6f7fb;
+  --color-sunken: #eef0f8;
+  --color-band: #f8eee3;
+  --color-panel: #eef1fd;
   --color-surface: #ffffff;
   --color-field: #ffffff;
-  --color-ink: #17171a;
-  --color-ink-2: #37373c;
-  --color-muted: #5c5c63;
-  --color-subtle: #6b6b72;
-  --color-line: #e6e4de;
-  --color-line-strong: #d3d0c8;
 
-  /* One professional blue. Green, amber and red only for status. */
-  --color-accent: #2450c8;
-  --color-accent-hover: #1c40a6;
-  --color-accent-soft: #edf2fd;
-  --color-accent-line: #c8d5f5;
+  /* Text is navy-tinted, not neutral black. */
+  --color-ink: #10104f;
+  --color-ink-2: #2a2a63;
+  --color-muted: #4d4d78;
+  --color-subtle: #64648a;
+  --color-line: #e3e5f0;
+  --color-line-strong: #cdd0e3;
 
+  /* Deep navy for primary actions and links. */
+  --color-accent: #0e0e62;
+  --color-accent-hover: #23238a;
+  --color-accent-soft: #eef1fd;
+  --color-accent-line: #c9cff2;
+
+  /* Warm yellow for the main call to action, tab indicators and counters. */
+  --color-highlight: #ffc72c;
+  --color-highlight-hover: #f5b800;
+  --color-highlight-soft: #fff4d4;
+
+  /* Status colors. */
   --color-success: #1f7a4d;
   --color-success-soft: #e9f6ee;
   --color-success-line: #bfe3cd;
@@ -59,12 +69,12 @@
   --color-danger-soft: #fdeeec;
   --color-danger-line: #f5c6c0;
 
-  --radius-control: 8px;
-  --radius-panel: 10px;
+  --radius-control: 6px;
+  --radius-panel: 8px;
 
-  --shadow-card: 0 1px 2px rgb(23 23 26 / 0.04), 0 1px 1px rgb(23 23 26 / 0.02);
-  --shadow-raised: 0 1px 2px rgb(23 23 26 / 0.05), 0 8px 24px -12px rgb(23 23 26 / 0.14);
-  --shadow-panel: 0 1px 2px rgb(23 23 26 / 0.05), 0 18px 40px -22px rgb(23 23 26 / 0.22);
+  --shadow-card: 0 1px 2px rgb(16 16 79 / 0.05);
+  --shadow-raised: 0 1px 2px rgb(16 16 79 / 0.05), 0 8px 24px -12px rgb(16 16 79 / 0.16);
+  --shadow-panel: 0 1px 2px rgb(16 16 79 / 0.06), 0 18px 40px -22px rgb(16 16 79 / 0.25);
 }
 
 @layer base {
@@ -134,7 +144,7 @@
   }
 
   .skeleton {
-    background: linear-gradient(90deg, var(--color-sunken) 0%, #e8e6df 50%, var(--color-sunken) 100%);
+    background: linear-gradient(90deg, var(--color-sunken) 0%, #e2e5f2 50%, var(--color-sunken) 100%);
     background-size: 200% 100%;
     animation: skeleton 1.4s ease-in-out infinite;
     border-radius: 4px;

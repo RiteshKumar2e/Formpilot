@@ -43,7 +43,7 @@ export function ProductPreview() {
           </Button>
         </div>
 
-        <div role="tablist" aria-label="Product screens" className="mt-10 inline-flex rounded-[var(--radius-control)] border border-line bg-surface p-1">
+        <div role="tablist" aria-label="Product screens" className="mt-10 flex gap-8 border-b border-line">
           {VIEWS.map((v) => (
             <button
               key={v.id}
@@ -52,7 +52,7 @@ export function ProductPreview() {
               aria-selected={view === v.id}
               aria-controls={`panel-${v.id}`}
               onClick={() => setView(v.id)}
-              className={cn('rounded-[6px] px-3.5 py-1.5 text-[14px] transition-colors', view === v.id ? 'bg-ink text-white' : 'text-ink-2 hover:text-ink')}
+              className={cn('-mb-px border-b-[3px] pb-3 text-[16px] transition-colors', view === v.id ? 'border-highlight font-medium text-ink' : 'border-transparent text-subtle hover:text-ink')}
             >
               {v.label}
             </button>
@@ -61,7 +61,7 @@ export function ProductPreview() {
 
         <div id={`panel-${current.id}`} role="tabpanel" aria-labelledby={`tab-${current.id}`} className="mt-5">
           <figure>
-            <div className="rounded-[14px] bg-sunken p-2 sm:p-3">
+            <div className="rounded-[12px] bg-band p-2 sm:p-3">
               <div className="overflow-hidden rounded-[var(--radius-panel)] border border-line bg-surface shadow-[var(--shadow-panel)]">
                 <picture>
                   <source media="(max-width: 640px)" srcSet={current.mobile} width={780} height={1560} />

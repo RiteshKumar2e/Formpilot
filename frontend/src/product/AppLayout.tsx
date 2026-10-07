@@ -67,14 +67,14 @@ function SidebarContent({ onNavigate, onHelp }: { onNavigate?: () => void; onHel
                 className={({ isActive }) =>
                   cn(
                     'flex items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-[14px] transition-colors',
-                    isActive ? 'bg-surface font-medium text-ink shadow-[var(--shadow-card)] ring-1 ring-line' : 'text-muted hover:bg-ink/[0.04] hover:text-ink',
+                    isActive ? 'bg-panel font-medium text-accent' : 'text-muted hover:bg-panel/60 hover:text-ink',
                   )
                 }
               >
                 <Icon className="size-4 shrink-0" aria-hidden />
                 {label}
                 {to === '/applications' && issues > 0 && (
-                  <span className="ml-auto rounded-full bg-warning-soft px-1.5 text-[11px] font-medium text-warning" aria-label={`${issues} need attention`}>
+                  <span className="ml-auto rounded-full bg-highlight px-1.5 text-[11px] font-semibold text-ink" aria-label={`${issues} need attention`}>
                     {issues}
                   </span>
                 )}
@@ -324,7 +324,7 @@ export function AppLayout() {
       </a>
 
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] border-r border-line bg-[#fbfaf8] px-3 py-5 lg:block">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] border-r border-line bg-surface px-3 py-5 lg:block">
         <SidebarContent onHelp={() => setGuide(true)} />
       </aside>
 
@@ -335,7 +335,7 @@ export function AppLayout() {
             <motion.div className="absolute inset-0 bg-ink/30" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMobileNav(false)} />
             <motion.aside
               aria-label="Navigation"
-              className="absolute inset-y-0 left-0 w-[280px] max-w-[85vw] bg-[#fbfaf8] px-3 py-5 shadow-[var(--shadow-panel)]"
+              className="absolute inset-y-0 left-0 w-[280px] max-w-[85vw] bg-surface px-3 py-5 shadow-[var(--shadow-panel)]"
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
@@ -376,7 +376,7 @@ export function AppLayout() {
             <div className="ml-auto flex items-center gap-2">
               <Notifications />
               {data && (
-                <Link to="/settings" className="flex size-9 items-center justify-center rounded-full bg-accent-soft text-[12px] font-semibold text-accent" aria-label="Account settings">
+                <Link to="/settings" className="flex size-9 items-center justify-center rounded-full bg-accent text-[12px] font-semibold text-white" aria-label="Account settings">
                   {initials(data.user.name)}
                 </Link>
               )}

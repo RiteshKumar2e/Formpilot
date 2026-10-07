@@ -148,7 +148,7 @@ export function ReviewPage() {
                     )}
                   </dd>
                   <dd>
-                    <FieldStatusBadge status={f.status} />
+                    <FieldStatusBadge status={f.status} required={f.required} />
                   </dd>
                 </div>
               ))}

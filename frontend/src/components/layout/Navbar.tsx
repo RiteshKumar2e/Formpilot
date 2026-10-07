@@ -38,7 +38,7 @@ export function Navbar() {
   const primary = inApp ? { to: '/dashboard', label: 'Open dashboard' } : { to: '/signup', label: 'Get Started' }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-line bg-canvas/95 backdrop-blur-sm">
+    <header className="sticky top-0 z-50 border-b border-line bg-surface/95 backdrop-blur-sm">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:rounded-[var(--radius-control)] focus:bg-surface focus:px-3 focus:py-2 focus:text-sm"
@@ -68,7 +68,7 @@ export function Navbar() {
               </Link>
             </>
           )}
-          <Button to={primary.to} size="sm">
+          <Button to={primary.to} size="sm" variant={inApp ? 'primary' : 'highlight'}>
             {primary.label}
           </Button>
         </div>
@@ -85,7 +85,7 @@ export function Navbar() {
         </button>
       </Container>
 
-      <div id="mobile-nav" hidden={!open} className="border-t border-line bg-canvas lg:hidden">
+      <div id="mobile-nav" hidden={!open} className="border-t border-line bg-surface lg:hidden">
         <Container className="pb-6 pt-2">
           <nav aria-label="Mobile">
             <ul className="divide-y divide-line">
@@ -105,7 +105,7 @@ export function Navbar() {
               )}
             </ul>
           </nav>
-          <Button to={primary.to} className="mt-4 w-full">
+          <Button to={primary.to} className="mt-4 w-full" variant={inApp ? 'primary' : 'highlight'}>
             {primary.label}
           </Button>
         </Container>

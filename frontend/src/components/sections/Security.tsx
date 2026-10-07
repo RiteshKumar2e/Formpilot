@@ -11,7 +11,7 @@ const ITEMS = [
 
 export function Security() {
   return (
-    <Section id="security" labelledBy="security-title" className="border-t border-line bg-sunken/60">
+    <Section id="security" labelledBy="security-title" className="bg-band">
       <Container>
         <SectionHeader
           id="security-title"

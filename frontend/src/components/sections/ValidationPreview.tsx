@@ -9,7 +9,7 @@ const POINTS = [
 
 export function ValidationPreview() {
   return (
-    <Section id="validation" labelledBy="validation-title" className="border-t border-line bg-sunken/50">
+    <Section id="validation" labelledBy="validation-title" className="bg-band">
       <Container className="grid grid-cols-[minmax(0,1fr)] items-center gap-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-20">
         <div>
           <SectionHeader

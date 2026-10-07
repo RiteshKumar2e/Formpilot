@@ -7,36 +7,47 @@ import { usePageMeta } from '../hooks/usePageMeta'
 import { Alert, PasswordField, TextField } from '../components/ui/FormControls'
 import { Button } from '../components/ui/Button'
 import { Honeypot } from '../components/ui/Honeypot'
-import { Container } from '../components/ui/primitives'
 import { useWorkspace } from '../product/workspace'
 
-function AuthShell({ title, subtitle, children, aside }: { title: string; subtitle: ReactNode; children: ReactNode; aside?: ReactNode }) {
+function AuthShell({ title, subtitle, children }: { title: string; subtitle: ReactNode; children: ReactNode }) {
   return (
-    <Container
-      className={cn(
-        'grid grid-cols-[minmax(0,1fr)] gap-12 py-12 sm:py-16 lg:py-24',
-        Boolean(aside) && 'lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] lg:items-start lg:gap-20',
-      )}
-    >
-      {/* With a side panel the form sits left of center; on its own it is centered. */}
-      <div className={cn('mx-auto w-full max-w-[440px]', Boolean(aside) && 'lg:mx-0 lg:ml-auto')}>
-        <h1 className="heading text-[32px] text-ink sm:text-[38px]">{title}</h1>
-        <p className="mt-2 text-[15px] text-muted">{subtitle}</p>
-        <div className="mt-8 rounded-[var(--radius-panel)] border border-line bg-surface p-6 sm:p-8">{children}</div>
-      </div>
-      {aside && <aside className="hidden lg:block">{aside}</aside>}
-    </Container>
+    <div className="w-full max-w-[420px]">
+      <h1 className="text-[30px] font-semibold tracking-[-0.025em] text-ink sm:text-[34px]">{title}</h1>
+      <p className="mt-2 text-[15px] text-muted">{subtitle}</p>
+      <div className="mt-8">{children}</div>
+    </div>
   )
 }
 
-const ONBOARDING = [
-  { title: 'Create your account', body: 'Your profile is private to you.' },
-  { title: 'Upload your documents', body: 'Resume, certificates, transcripts, IDs.' },
-  { title: 'Review your profile', body: 'Confirm what FormPilot extracted and resolve conflicts.' },
-]
+/** 0 to 3: long enough, has a letter and a number, and is long or has a symbol. */
+function passwordScore(value: string): number {
+  if (!value) return 0
+  let score = 0
+  if (value.length >= 6) score++
+  if (/[A-Za-z]/.test(value) && /\d/.test(value)) score++
+  if (value.length >= 10 || /[^A-Za-z0-9]/.test(value)) score++
+  return score
+}
+
+function PasswordStrength({ value }: { value: string }) {
+  if (!value) return null
+  const score = passwordScore(value)
+  const label = ['Too weak', 'Weak', 'Good', 'Strong'][score]
+  const color = ['bg-danger', 'bg-danger', 'bg-highlight', 'bg-success'][score]
+  return (
+    <div className="-mt-2" aria-live="polite">
+      <div className="flex gap-1.5" aria-hidden>
+        {[1, 2, 3].map((i) => (
+          <span key={i} className={cn('h-1 flex-1 rounded-full transition-colors', i <= score ? color : 'bg-ink/[0.08]')} />
+        ))}
+      </div>
+      <p className="mt-1.5 text-[13px] text-subtle">Password strength: {label}</p>
+    </div>
+  )
+}
 
 export function GetStartedPage() {
-  usePageMeta({ title: 'Get Started', path: '/get-started', description: 'Create your FormPilot account and build a reusable profile from your documents.' })
+  usePageMeta({ title: 'Create your account', path: '/signup', description: 'Create your FormPilot account and build a reusable profile from your documents.' })
   const { user, loading, setUser } = useAuth()
   const { open } = useWorkspace()
   const navigate = useNavigate()
@@ -88,23 +99,6 @@ export function GetStartedPage() {
           </Link>
         </>
       }
-      aside={
-        <div className="pt-2">
-          <p className="eyebrow">What happens next</p>
-          <ol className="mt-5 border-t border-line">
-            {ONBOARDING.map((step, i) => (
-              <li key={step.title} className={cn('grid grid-cols-[2.5rem_1fr] border-b border-line py-5', i === 0 && 'text-ink')}>
-                <span className="pt-0.5 font-mono text-[13px] text-subtle">0{i + 1}</span>
-                <div>
-                  <p className="text-[16px] font-medium text-ink">{step.title}</p>
-                  <p className="mt-0.5 text-[15px] text-muted">{step.body}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-          <p className="mt-6 text-[15px] text-ink-2">FormPilot prepares answers. It never submits a form for you.</p>
-        </div>
-      }
     >
       <form noValidate onSubmit={onSubmit} className="relative space-y-5">
         <Honeypot value={website} onChange={setWebsite} />
@@ -136,6 +130,7 @@ export function GetStartedPage() {
           hint="At least 6 characters, with a letter and a number."
           onChange={(e) => setValues({ ...values, password: e.target.value })}
         />
+        <PasswordStrength value={values.password} />
         <div>
           <label className="flex items-start gap-3 text-[14px] text-ink-2">
             <input
@@ -173,7 +168,7 @@ export function GetStartedPage() {
 }
 
 export function SignInPage() {
-  usePageMeta({ title: 'Sign In', path: '/signin', description: 'Sign in to your FormPilot workspace.' })
+  usePageMeta({ title: 'Sign In', path: '/login', description: 'Sign in to your FormPilot workspace.' })
   const { user, loading, setUser } = useAuth()
   const { open } = useWorkspace()
   const navigate = useNavigate()
@@ -210,7 +205,7 @@ export function SignInPage() {
 
   return (
     <AuthShell
-      title="Welcome back"
+      title="Sign in to FormPilot"
       subtitle={
         <>
           New to FormPilot?{' '}
@@ -243,6 +238,12 @@ export function SignInPage() {
         <Button type="submit" size="lg" className="w-full" disabled={submitting}>
           {submitting ? 'Signing in…' : 'Sign In'}
         </Button>
+        <p className="text-center text-[14px] text-muted">
+          Forgot your password?{' '}
+          <Link to="/contact" className="font-medium text-accent underline underline-offset-2">
+            Contact support
+          </Link>
+        </p>
       </form>
     </AuthShell>
   )

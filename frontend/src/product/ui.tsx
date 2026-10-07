@@ -65,7 +65,8 @@ export function ApplicationStatusBadge({ status }: { status: ApplicationStatus }
   return <Badge tone={APP_TONE[status]}>{STATUS_LABEL[status]}</Badge>
 }
 
-export function FieldStatusBadge({ status }: { status: FieldStatus }) {
+export function FieldStatusBadge({ status, required = true }: { status: FieldStatus; required?: boolean }) {
+  if (status === 'missing' && !required) return <Badge tone="neutral">Optional</Badge>
   switch (status) {
     case 'mapped':
       return <Badge tone="success" icon={CheckCircle2}>Mapped</Badge>
