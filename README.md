@@ -117,8 +117,6 @@ cd Formpilot
 
 ```bash
 cd backend
-python -m venv .venv                 # or: python -m virtualenv .venv
-.venv\Scripts\activate               # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env                 # optional for local development
 uvicorn app.main:app --reload --port 8000
@@ -269,7 +267,7 @@ Formpilot/
 ```bash
 # Backend: 25 tests covering auth, uploads, extraction, conflicts, mapping, rate limits and HTTPS
 cd backend
-.venv\Scripts\python -m pytest -q
+python -m pytest -q
 
 # Frontend: type-check and production build
 cd frontend
