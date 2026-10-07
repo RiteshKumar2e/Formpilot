@@ -8,10 +8,11 @@ import { useAuth } from '../../hooks/useAuth'
 import { useWorkspace } from '../../product/workspace'
 
 export const NAV_LINKS = [
-  { label: 'Product', to: '/#product' },
-  { label: 'How It Works', to: '/how-it-works' },
+  { label: 'Home', to: '/' },
+  { label: 'About', to: '/about' },
   { label: 'Features', to: '/features' },
-  { label: 'Security', to: '/security' },
+  { label: 'How It Works', to: '/how-it-works' },
+  { label: 'Contact', to: '/contact' },
 ]
 
 export function Navbar() {

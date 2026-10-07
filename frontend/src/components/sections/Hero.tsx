@@ -14,7 +14,7 @@ export function Hero() {
       <Container className="grid grid-cols-[minmax(0,1fr)] items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-14">
         <div>
           <p className="eyebrow">Application automation</p>
-          <h1 id="hero-title" className="display mt-4 text-[44px] text-ink sm:text-[58px] lg:text-[52px] xl:text-[60px]">
+          <h1 id="hero-title" className="display mt-4 text-[44px] text-ink sm:text-[58px] lg:text-[46px] xl:text-[54px]">
             Your information.
             <br />
             <span className="text-muted">Ready when you are.</span>

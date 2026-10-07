@@ -38,24 +38,46 @@ The Vite dev server proxies `/api` to the backend.
 ## Tests
 
 ```bash
-cd backend && .venv/Scripts/python -m pytest -q    # 21 tests
+cd backend && .venv/Scripts/python -m pytest -q    # 24 tests
 cd frontend && npm run build                       # type-checks and builds
 ```
 
-## What's built
+## The product
+
+**Demo Mode** (for judges): click **Start Product Demo** on the home, login or signup page. It loads a fictional applicant (Ritesh Kumar) with 8 documents and 6 applications, stored only in the browser. The yellow **Demo Mode** badge opens a step-by-step demo guide. "Reset demo data" restores the starting state.
+
+**Account mode**: sign up or sign in. Documents, profile, conflicts and field mapping run on the FastAPI backend. Applications are saved in the browser until an applications API exists (the UI says so).
+
+| Route | What it shows |
+| --- | --- |
+| `/dashboard` | Profile completion, documents, applications, quick actions, activity |
+| `/profile` | Every profile value with its source document, verification and inline editing |
+| `/documents` | Category filters, document detail drawer, upload with processing stages and errors |
+| `/applications`, `/applications/new` | Status filters; create from a type, template or pasted field list |
+| `/applications/:id` | Workspace: structure, mapped form, assistant with source, confidence, reasoning and retrieval candidates |
+| `/mapping` | Field → match → source → confidence for every field |
+| `/validation` | Conflicts and missing information, each with a fix |
+| `/applications/:id/review` | Final review, explicit approval, "Ready for Submission" success state |
+| `/activity`, `/settings` | Timeline of everything that happened; account, security, notifications, privacy |
+
+Code lives in `frontend/src/product/`: `types.ts` (domain model), `workspace.tsx` (one interface over the demo and API data sources), `matcher.ts` (in-browser retrieval and mapping used in Demo Mode), `demoData.ts`, `selectors.ts`, and `pages/`.
+
+**Honest about what's simulated:** Demo Mode never reads uploaded files; its processing stages are simulated and labelled. Field matching in Demo Mode is real code (phrasing tables plus text similarity), not hard-coded answers. Nothing is ever submitted: approval marks an application "Ready for Submission".
+
+## What's built on the backend
 
 | Area | Today |
 | --- | --- |
 | Accounts | scrypt-hashed passwords, 12-hour httpOnly session cookie, account deletion |
 | Documents | PDF/JPG/PNG up to 10 MB, type sniffed from bytes, encrypted at rest (Fernet) |
 | Extraction | PDF text layer + rules: name, email, phone, date of birth, degree, institution, graduation year, experience, skills, LinkedIn, GitHub |
-| OCR | Optional (`requirements-ocr.txt` + Tesseract). Without it, images are marked *needs attention* and nothing is extracted |
+| OCR | Optional (`requirements-ocr.txt` + Tesseract). Without it, images are marked *needs review* |
 | Conflicts | Values that differ across documents are surfaced; your choice is saved |
 | Field matching | Phrasing tables + token/trigram similarity (`services/mapping.py`) |
-| Abuse protection | Per-IP rate limits on sign-up, sign-in, contact and uploads; honeypot fields on sign-up and contact |
+| Abuse protection | Per-IP rate limits on sign-up, sign-in, contact and uploads; honeypot fields |
 | Transport | HTTPS redirect + HSTS in production (`ENFORCE_HTTPS`), security headers |
 
-**Planned and not built:** model-assisted extraction, embeddings/vector retrieval, and filling forms directly on third-party sites. The site describes these as planned.
+**Planned, not built:** LLM-assisted extraction, embeddings with vector search (the `Embedder` interface in `services/mapping.py`), an applications API, form-PDF parsing, and filling forms on third-party sites.
 
 ## Configuration
 
@@ -68,7 +90,7 @@ cd frontend && npm run build                       # type-checks and builds
 ## Before launch
 
 - The Privacy Policy and Terms of Service are **drafts**. Highlighted placeholders need the operator's legal name, address, hosting region, retention periods and governing law, followed by legal review.
-- The screenshots in `public/screens/` are real captures of the app with fictional sample data. Retake them if the UI changes.
+- The screenshots in `public/screens/` are real captures of the product in Demo Mode. Retake them if the UI changes.
 
 ## Design
 

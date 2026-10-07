@@ -71,17 +71,19 @@ export function ProductPreview() {
           ))}
         </div>
 
-        <figure id={`panel-${current.id}`} role="tabpanel" aria-labelledby={`tab-${current.id}`} className="mt-5">
-          <div className="rounded-[14px] bg-sunken p-2 sm:p-3">
-            <div className="overflow-hidden rounded-[var(--radius-panel)] border border-line bg-surface shadow-[var(--shadow-panel)]">
-              <picture>
-                <source media="(max-width: 640px)" srcSet={current.mobile} width={780} height={1560} />
-                <img src={current.src} width={current.size[0]} height={current.size[1]} loading="lazy" decoding="async" alt={current.alt} className="block h-auto w-full" />
-              </picture>
+        <div id={`panel-${current.id}`} role="tabpanel" aria-labelledby={`tab-${current.id}`} className="mt-5">
+          <figure>
+            <div className="rounded-[14px] bg-sunken p-2 sm:p-3">
+              <div className="overflow-hidden rounded-[var(--radius-panel)] border border-line bg-surface shadow-[var(--shadow-panel)]">
+                <picture>
+                  <source media="(max-width: 640px)" srcSet={current.mobile} width={780} height={1560} />
+                  <img src={current.src} width={current.size[0]} height={current.size[1]} loading="lazy" decoding="async" alt={current.alt} className="block h-auto w-full" />
+                </picture>
+              </div>
             </div>
-          </div>
-          <figcaption className="mt-3 text-[14px] text-muted">{current.note}</figcaption>
-        </figure>
+            <figcaption className="mt-3 text-[14px] text-muted">{current.note}</figcaption>
+          </figure>
+        </div>
       </Container>
     </Section>
   )
