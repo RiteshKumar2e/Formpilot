@@ -1,13 +1,8 @@
-import { Link, useNavigate } from 'react-router-dom'
-import { FlaskConical } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { CONTACT_EMAIL, GITHUB_URL, LINKEDIN_URL } from '../../config/site'
 import { Container } from '../ui/primitives'
-import { useWorkspace } from '../../product/workspace'
 
 export function FinalCTA() {
-  const { startDemo } = useWorkspace()
-  const navigate = useNavigate()
-
   return (
     <section id="contact" aria-labelledby="cta-title" className="border-t border-line py-24 sm:py-28">
       <Container>
@@ -25,17 +20,12 @@ export function FinalCTA() {
             >
               Get Started
             </Link>
-            <button
-              type="button"
-              onClick={() => {
-                startDemo()
-                navigate('/dashboard')
-              }}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-white/40 px-6 text-[16px] font-medium text-white hover:bg-white/10 focus-visible:outline-white"
+            <Link
+              to="/login"
+              className="inline-flex h-12 items-center justify-center rounded-[var(--radius-control)] border border-white/40 px-6 text-[16px] font-medium text-white hover:bg-white/10 focus-visible:outline-white"
             >
-              <FlaskConical className="size-4" aria-hidden />
-              Start Product Demo
-            </button>
+              Sign In
+            </Link>
           </div>
           <Link to="/how-it-works" className="mt-6 inline-block text-[15px] text-white/85 underline underline-offset-4 hover:text-white">
             Explore How It Works

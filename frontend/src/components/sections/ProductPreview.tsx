@@ -1,10 +1,7 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { FlaskConical } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/Button'
 import { Container, Section, SectionHeader } from '../ui/primitives'
-import { useWorkspace } from '../../product/workspace'
 
 const VIEWS = [
   {
@@ -29,8 +26,6 @@ const VIEWS = [
 
 export function ProductPreview() {
   const [view, setView] = useState<(typeof VIEWS)[number]['id']>('workspace')
-  const { startDemo } = useWorkspace()
-  const navigate = useNavigate()
   const current = VIEWS.find((v) => v.id === view)!
 
   return (
@@ -41,17 +36,10 @@ export function ProductPreview() {
             id="product-title"
             eyebrow="The product"
             title="One profile. Every application."
-            description="These are real screenshots of FormPilot running in Demo Mode with a fictional applicant."
+            description="Real screenshots of FormPilot with sample documents uploaded to an account."
           />
-          <Button
-            variant="secondary"
-            onClick={() => {
-              startDemo()
-              navigate('/dashboard')
-            }}
-          >
-            <FlaskConical className="size-4" aria-hidden />
-            Open it yourself
+          <Button to="/signup" variant="secondary">
+            Create your account
           </Button>
         </div>
 

@@ -1,13 +1,11 @@
 /**
- * Workspace state for the product. One interface, two data sources:
- *  - Demo Mode: a local, fictional dataset (src/product/demoData.ts). Processing is simulated and labelled.
- *  - Account mode: documents, profile, conflicts and field mapping come from the FastAPI backend.
- *    Applications are not stored by the API yet, so in account mode they are saved in this browser.
+ * Workspace state for the signed-in user.
+ * Documents, profile, conflicts and field mapping come from the FastAPI backend.
+ * Applications are not stored by the API yet, so they are saved in this browser, per account.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { api, ApiError } from '../lib/api'
 import type { DocumentRecord, FieldMatch, Profile as ApiProfile } from '../types/api'
-import { buildFields, createDemoWorkspace, documentFields, TEMPLATE_FIELDS } from './demoData'
 import { deriveStatus } from './selectors'
 import type {
   ActivityItem,
@@ -15,7 +13,6 @@ import type {
   Application,
   ApplicationField,
   ApplicationType,
-  DataMode,
   DocumentCategory,
   DocumentItem,
   ProfileField,
@@ -23,16 +20,13 @@ import type {
   WorkspaceData,
 } from './types'
 
-const DEMO_KEY = 'fp-demo-workspace'
-const MODE_KEY = 'fp-mode'
-const ACCOUNT_APPS_KEY = (email: string) => `fp-apps:${email}`
+const APPS_KEY = (email: string) => `fp-apps:${email}`
+const ACTIVITY_KEY = (email: string) => `fp-activity:${email}`
 
-export type UploadStage = 'uploading' | 'ocr' | 'extracting' | 'validating' | 'ready'
+export type UploadStage = 'uploading' | 'extracting' | 'ready'
 export const UPLOAD_STAGES: { id: UploadStage; label: string }[] = [
   { id: 'uploading', label: 'Uploading' },
-  { id: 'ocr', label: 'Reading text (OCR)' },
   { id: 'extracting', label: 'Extracting information' },
-  { id: 'validating', label: 'Validating against your profile' },
   { id: 'ready', label: 'Ready' },
 ]
 
@@ -55,14 +49,11 @@ interface NewApplication {
 }
 
 interface WorkspaceContextValue {
-  mode: DataMode | null
   data: WorkspaceData | null
   loading: boolean
   error: WorkspaceError | null
-  startDemo: () => void
-  resetDemo: () => void
-  enterAccount: (user: { full_name: string; email: string }) => void
-  leave: () => void
+  open: (user: { full_name: string; email: string }) => void
+  close: () => void
   reload: () => Promise<void>
   uploadDocument: (file: File, onStage: (stage: UploadStage, percent?: number) => void) => Promise<DocumentItem>
   deleteDocument: (id: string) => Promise<void>
@@ -82,7 +73,6 @@ const WorkspaceContext = createContext<WorkspaceContextValue | null>(null)
 const now = () => new Date().toISOString()
 let seq = 0
 const uid = (p: string) => `${p}-${Date.now().toString(36)}${(seq++).toString(36)}`
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 function activity(kind: ActivityKind, title: string, detail: string, applicationId?: string): ActivityItem {
   return { id: uid('act'), kind, title, detail, at: now(), applicationId }
@@ -129,6 +119,14 @@ const SECTION_FOR: Record<string, ProfileSection> = {
   skills: 'skills',
 }
 
+const FORM_SECTION: Record<ProfileSection, string> = {
+  personal: 'Personal Information',
+  contact: 'Personal Information',
+  education: 'Education',
+  experience: 'Experience',
+  skills: 'Skills',
+}
+
 function fromApiProfile(p: ApiProfile): ProfileField[] {
   const fields: ProfileField[] = p.fields.map((f) => ({
     key: f.key,
@@ -173,32 +171,37 @@ function fromApiDocument(d: DocumentRecord): DocumentItem {
 
 function fromApiMatch(m: FieldMatch, profile: ProfileField[]): ApplicationField {
   const conflict = m.needs_review ? profile.find((p) => p.key === m.key)?.conflict : undefined
+  const section = m.key && SECTION_FOR[m.key] ? FORM_SECTION[SECTION_FOR[m.key]] : 'Additional Information'
   const base = {
     id: uid('f'),
-    section: 'Additional Information',
+    section,
     label: m.form_label,
     required: true,
     profileKey: m.key,
     candidates: conflict ? conflict.map((c) => ({ ...c, score: 1 })) : [],
   }
-  const section =
-    m.key && SECTION_FOR[m.key]
-      ? ({ personal: 'Personal Information', contact: 'Personal Information', education: 'Education', experience: 'Experience', skills: 'Skills' } as const)[SECTION_FOR[m.key]]
-      : 'Additional Information'
   if (conflict) {
-    return { ...base, section, value: '', status: 'conflict', source: null, confidence: 0, reasoning: 'Your documents disagree on this value, so FormPilot needs you to choose.' }
+    return { ...base, value: '', status: 'conflict', source: null, confidence: 0, reasoning: 'Your documents disagree on this value, so FormPilot needs you to choose.' }
   }
   if (!m.value) {
-    return { ...base, section, value: '', status: 'missing', source: null, confidence: 0, reasoning: `No profile detail matches “${m.form_label}” yet.` }
+    return {
+      ...base,
+      value: '',
+      status: 'missing',
+      source: null,
+      confidence: 0,
+      reasoning: m.key
+        ? `“${m.form_label}” asks for your ${m.key.replace(/_/g, ' ')}, which isn’t in your profile yet.`
+        : `No profile detail matches “${m.form_label}”. Add it here and it will be kept for this application.`,
+    }
   }
   return {
     ...base,
-    section,
     value: m.value,
     status: m.confidence >= 0.8 ? 'mapped' : 'needs_review',
     source: m.source_filename,
     confidence: m.confidence,
-    reasoning: `Matched by the FormPilot API to your ${m.key?.replace(/_/g, ' ')}, extracted from ${m.source_filename}.`,
+    reasoning: `“${m.form_label}” was matched to your ${m.key?.replace(/_/g, ' ')}, extracted from ${m.source_filename}.`,
   }
 }
 
@@ -246,55 +249,45 @@ function propagate(apps: Application[], key: string, value: string, source: stri
 // ---------- provider ----------
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
-  const [mode, setMode] = useState<DataMode | null>(() => (readJson<DataMode>(MODE_KEY) === 'demo' ? 'demo' : null))
-  // If Demo Mode is on but its saved data is gone (cleared storage, private window), start fresh.
-  const [data, setData] = useState<WorkspaceData | null>(() =>
-    readJson<DataMode>(MODE_KEY) === 'demo' ? (readJson<WorkspaceData>(DEMO_KEY) ?? createDemoWorkspace()) : null,
-  )
+  const [data, setData] = useState<WorkspaceData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<WorkspaceError | null>(null)
   const dataRef = useRef(data)
   dataRef.current = data
 
-  // Persist: demo data to its own key, account applications per user.
+  // Applications and the local activity log are kept per account in this browser.
   useEffect(() => {
     if (!data) return
-    if (mode === 'demo') writeJson(DEMO_KEY, data)
-    if (mode === 'account') writeJson(ACCOUNT_APPS_KEY(data.user.email), data.applications)
-  }, [data, mode])
+    writeJson(APPS_KEY(data.user.email), data.applications)
+    writeJson(ACTIVITY_KEY(data.user.email), data.activity)
+  }, [data])
+
+  // Clean up storage left by earlier builds that had a demo mode.
+  useEffect(() => {
+    try {
+      localStorage.removeItem('fp-demo-workspace')
+      localStorage.removeItem('fp-mode')
+    } catch {
+      /* ignore */
+    }
+  }, [])
 
   const update = useCallback((fn: (d: WorkspaceData) => WorkspaceData) => {
     setData((d) => (d ? fn(d) : d))
   }, [])
 
-  const startDemo = useCallback(() => {
-    const saved = readJson<WorkspaceData>(DEMO_KEY)
-    writeJson(MODE_KEY, 'demo')
-    setError(null)
-    setMode('demo')
-    setData(saved ?? createDemoWorkspace())
-  }, [])
-
-  const resetDemo = useCallback(() => {
-    const fresh = createDemoWorkspace()
-    writeJson(DEMO_KEY, fresh)
-    writeJson(MODE_KEY, 'demo')
-    setMode('demo')
-    setError(null)
-    setData(fresh)
-  }, [])
-
-  const loadAccount = useCallback(async (user: { name: string; email: string }) => {
+  const load = useCallback(async (user: { name: string; email: string }) => {
     setLoading(true)
     setError(null)
     try {
       const [docs, profile] = await Promise.all([api.documents.list(), api.profile.get()])
+      const saved = readJson<ActivityItem[]>(ACTIVITY_KEY(user.email))
       setData({
         user,
         profile: fromApiProfile(profile),
         documents: docs.map(fromApiDocument),
-        applications: readJson<Application[]>(ACCOUNT_APPS_KEY(user.email)) ?? [],
-        activity: docs.map((d) => activity('document_uploaded', 'Document uploaded', d.filename)).map((a, i) => ({ ...a, at: docs[i].created_at })),
+        applications: readJson<Application[]>(APPS_KEY(user.email)) ?? [],
+        activity: saved ?? docs.map((d) => ({ ...activity('document_uploaded', 'Document uploaded', d.filename), at: d.created_at })),
       })
     } catch (err) {
       setError(toWorkspaceError(err, 'Couldn’t load your workspace.'))
@@ -303,31 +296,24 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const enterAccount = useCallback(
+  const open = useCallback(
     (user: { full_name: string; email: string }) => {
-      writeJson(MODE_KEY, 'account')
-      setMode('account')
-      void loadAccount({ name: user.full_name, email: user.email })
+      if (dataRef.current?.user.email === user.email) return
+      void load({ name: user.full_name, email: user.email })
     },
-    [loadAccount],
+    [load],
   )
 
-  const leave = useCallback(() => {
-    try {
-      localStorage.removeItem(MODE_KEY)
-    } catch {
-      /* ignore */
-    }
-    setMode(null)
+  const close = useCallback(() => {
     setData(null)
     setError(null)
   }, [])
 
   const reload = useCallback(async () => {
-    if (mode === 'account' && dataRef.current) await loadAccount(dataRef.current.user)
-  }, [mode, loadAccount])
+    if (dataRef.current) await load(dataRef.current.user)
+  }, [load])
 
-  const refreshAccountProfile = useCallback(async () => {
+  const refreshProfile = useCallback(async () => {
     const profile = fromApiProfile(await api.profile.get())
     update((d) => ({ ...d, profile }))
   }, [update])
@@ -335,36 +321,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const uploadDocument = useCallback<WorkspaceContextValue['uploadDocument']>(
     async (file, onStage) => {
       validateFile(file)
-      if (mode === 'demo') {
-        // Demo Mode: no file content is read. Stages are simulated and the UI says so.
-        for (const stage of UPLOAD_STAGES) {
-          onStage(stage.id, stage.id === 'uploading' ? 100 : undefined)
-          await wait(stage.id === 'ready' ? 150 : 650)
-        }
-        const doc: DocumentItem = {
-          id: uid('doc'),
-          name: file.name,
-          category: guessCategory(file.name),
-          fileType: file.type === 'application/pdf' ? 'PDF' : file.type === 'image/png' ? 'PNG' : 'JPG',
-          sizeKb: Math.max(1, Math.round(file.size / 1024)),
-          pages: null,
-          status: 'processed',
-          verified: false,
-          uploadedAt: now(),
-          message: 'Processing was simulated in Demo Mode, so no details were read from this file. Sign in to extract real details.',
-          extracted: [],
-        }
-        update((d) => ({
-          ...d,
-          documents: [doc, ...d.documents],
-          activity: [activity('document_uploaded', 'Document uploaded', `${file.name} (Demo Mode)`), ...d.activity],
-        }))
-        return doc
-      }
-
       try {
-        const record = await api.documents.upload(file, (p) => onStage('uploading', p))
-        onStage('extracting')
+        const record = await api.documents.upload(file, (p) => {
+          onStage('uploading', p)
+          if (p >= 100) onStage('extracting')
+        })
         const doc = fromApiDocument(record)
         onStage('ready')
         update((d) => ({
@@ -377,7 +338,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             ...d.activity,
           ],
         }))
-        await refreshAccountProfile()
+        await refreshProfile()
         return doc
       } catch (err) {
         const e = toWorkspaceError(err, 'We couldn’t process this document.')
@@ -385,97 +346,65 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         throw e
       }
     },
-    [mode, update, refreshAccountProfile],
+    [update, refreshProfile],
   )
 
   const deleteDocument = useCallback(
     async (id: string) => {
-      if (mode === 'account') {
-        try {
-          await api.documents.remove(id)
-          await refreshAccountProfile()
-        } catch (err) {
-          throw toWorkspaceError(err, 'Couldn’t delete this document.')
-        }
+      try {
+        await api.documents.remove(id)
+        await refreshProfile()
+      } catch (err) {
+        throw toWorkspaceError(err, 'Couldn’t delete this document.')
       }
       update((d) => ({ ...d, documents: d.documents.filter((doc) => doc.id !== id) }))
     },
-    [mode, update, refreshAccountProfile],
+    [update, refreshProfile],
+  )
+
+  const saveProfileValue = useCallback(
+    async (key: string, value: string, source: string | null, kind: ActivityKind, title: string) => {
+      try {
+        const profile = fromApiProfile(await api.profile.resolveConflict(key, value))
+        update((d) => {
+          const label = d.profile.find((f) => f.key === key)?.label ?? key.replace(/_/g, ' ')
+          return {
+            ...d,
+            profile,
+            applications: propagate(d.applications, key, value, source),
+            activity: [activity(kind, title, `${label} set to ${value}${source ? ` from ${source}` : ''}`), ...d.activity],
+          }
+        })
+      } catch (err) {
+        throw toWorkspaceError(err, 'Couldn’t save this change.')
+      }
+    },
+    [update],
   )
 
   const resolveConflict = useCallback(
-    async (key: string, value: string, source: string | null) => {
-      if (mode === 'account') {
-        try {
-          const profile = fromApiProfile(await api.profile.resolveConflict(key, value))
-          update((d) => ({ ...d, profile }))
-        } catch (err) {
-          throw toWorkspaceError(err, 'Couldn’t save your choice.')
-        }
-      }
-      update((d) => {
-        const field = d.profile.find((f) => f.key === key)
-        return {
-          ...d,
-          profile:
-            mode === 'demo'
-              ? d.profile.map((f) => (f.key === key ? { ...f, value, source, confidence: 1, verified: true, conflict: undefined } : f))
-              : d.profile,
-          applications: propagate(d.applications, key, value, source),
-          activity: [activity('issue_resolved', 'Issue resolved', `${field?.label ?? key} set to ${value}${source ? ` from ${source}` : ''}`), ...d.activity],
-        }
-      })
-    },
-    [mode, update],
+    (key: string, value: string, source: string | null) => saveProfileValue(key, value, source, 'issue_resolved', 'Issue resolved'),
+    [saveProfileValue],
   )
 
   const updateProfileValue = useCallback(
-    async (key: string, value: string) => {
-      if (mode === 'account') {
-        try {
-          const profile = fromApiProfile(await api.profile.resolveConflict(key, value))
-          update((d) => ({ ...d, profile }))
-        } catch (err) {
-          throw toWorkspaceError(err, 'Couldn’t save this change.')
-        }
-      }
-      update((d) => {
-        const field = d.profile.find((f) => f.key === key)
-        return {
-          ...d,
-          profile:
-            mode === 'demo'
-              ? d.profile.map((f) => (f.key === key ? { ...f, value, source: null, confidence: 1, verified: true, conflict: undefined } : f))
-              : d.profile,
-          applications: propagate(d.applications, key, value, null),
-          activity: [activity('profile_updated', 'Profile updated', `${field?.label ?? key} edited`), ...d.activity],
-        }
-      })
-    },
-    [mode, update],
+    (key: string, value: string) => saveProfileValue(key, value, null, 'profile_updated', 'Profile updated'),
+    [saveProfileValue],
   )
 
   const createApplication = useCallback(
     async ({ title, organization, type, labels }: NewApplication) => {
       const current = dataRef.current
-      if (!current) throw new WorkspaceError('No workspace loaded.', 'Start the demo or sign in first.', 'signin')
+      if (!current) throw new WorkspaceError('Your workspace isn’t loaded.', 'Sign in again to continue.', 'signin')
       const cleaned = labels.map((l) => l.trim()).filter(Boolean)
       if (!cleaned.length) throw new WorkspaceError('No fields to map.', 'Add at least one form field.', 'retry')
 
       let fields: ApplicationField[]
-      if (mode === 'account') {
-        try {
-          const { matches } = await api.mapping.match(cleaned)
-          fields = matches.map((m) => fromApiMatch(m, current.profile))
-        } catch (err) {
-          throw toWorkspaceError(err, 'Couldn’t map this application.')
-        }
-      } else {
-        fields = buildFields(cleaned, current.profile)
-        if (type === 'job' || type === 'admission') {
-          const docs = current.documents.filter((d) => d.category === 'Resume' || d.category === 'Education').map((d) => d.name)
-          fields = [...fields, ...documentFields(docs.slice(0, 3))]
-        }
+      try {
+        const { matches } = await api.mapping.match(cleaned)
+        fields = matches.map((m) => fromApiMatch(m, current.profile))
+      } catch (err) {
+        throw toWorkspaceError(err, 'Couldn’t map this application.')
       }
 
       const id = uid('app')
@@ -506,7 +435,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       }))
       return id
     },
-    [mode, update],
+    [update],
   )
 
   const updateField = useCallback(
@@ -529,17 +458,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [update],
   )
 
-  const acceptField = useCallback(
-    (appId: string, fieldId: string) => updateField(appId, fieldId, { status: 'confirmed' }),
-    [updateField],
-  )
+  const acceptField = useCallback((appId: string, fieldId: string) => updateField(appId, fieldId, { status: 'confirmed' }), [updateField])
 
   const approveApplication = useCallback(
     (appId: string) => {
       update((d) => {
         const app = d.applications.find((a) => a.id === appId)
         if (!app) return d
-        const reference = `FP-2026-${String(124 + d.applications.filter((a) => a.reference).length).padStart(5, '0')}`
+        const year = new Date().getFullYear()
+        const reference = `FP-${year}-${String(d.applications.filter((a) => a.reference).length + 1).padStart(5, '0')}`
         return {
           ...d,
           applications: d.applications.map((a) => (a.id === appId ? { ...a, status: 'prepared', reference, preparedAt: now(), updatedAt: now() } : a)),
@@ -557,14 +484,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<WorkspaceContextValue>(
     () => ({
-      mode,
       data,
       loading,
       error,
-      startDemo,
-      resetDemo,
-      enterAccount,
-      leave,
+      open,
+      close,
       reload,
       uploadDocument,
       deleteDocument,
@@ -576,7 +500,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       approveApplication,
       deleteApplication,
     }),
-    [mode, data, loading, error, startDemo, resetDemo, enterAccount, leave, reload, uploadDocument, deleteDocument, updateProfileValue, resolveConflict, createApplication, updateField, acceptField, approveApplication, deleteApplication],
+    [data, loading, error, open, close, reload, uploadDocument, deleteDocument, updateProfileValue, resolveConflict, createApplication, updateField, acceptField, approveApplication, deleteApplication],
   )
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>
@@ -587,5 +511,3 @@ export function useWorkspace() {
   if (!ctx) throw new Error('useWorkspace must be used inside <WorkspaceProvider>')
   return ctx
 }
-
-export { TEMPLATE_FIELDS }

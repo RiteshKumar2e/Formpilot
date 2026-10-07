@@ -1,4 +1,4 @@
-// Domain model for the FormPilot product. Both data sources (demo and API) produce these shapes.
+// Domain model for the FormPilot product, built from FastAPI responses (see src/product/workspace.tsx).
 
 export type ProfileSection = 'personal' | 'contact' | 'education' | 'experience' | 'skills'
 
@@ -105,4 +105,3 @@ export interface WorkspaceData {
   activity: ActivityItem[]
 }
 
-export type DataMode = 'demo' | 'account'

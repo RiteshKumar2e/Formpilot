@@ -22,7 +22,7 @@ function DocIcon({ doc }: { doc: Pick<DocumentItem, 'fileType'> }) {
 }
 
 function UploadFlow({ onDone }: { onDone: (doc: DocumentItem) => void }) {
-  const { uploadDocument, mode } = useWorkspace()
+  const { uploadDocument } = useWorkspace()
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
   const [file, setFile] = useState<File | null>(null)
@@ -31,8 +31,7 @@ function UploadFlow({ onDone }: { onDone: (doc: DocumentItem) => void }) {
   const [error, setError] = useState<WorkspaceError | null>(null)
   const [result, setResult] = useState<DocumentItem | null>(null)
 
-  // Account uploads report three real stages; Demo Mode simulates all five.
-  const stages = mode === 'demo' ? UPLOAD_STAGES : UPLOAD_STAGES.filter((s) => ['uploading', 'extracting', 'ready'].includes(s.id))
+  const stages = UPLOAD_STAGES
   const currentIndex = stage ? stages.findIndex((s) => s.id === stage) : -1
 
   const start = async (f: File) => {
@@ -118,7 +117,6 @@ function UploadFlow({ onDone }: { onDone: (doc: DocumentItem) => void }) {
             )
           })}
         </ol>
-        {mode === 'demo' && <p className="mt-6 text-[13px] text-subtle">Demo Mode simulates these stages. No content is read from your file.</p>}
       </div>
     )
   }

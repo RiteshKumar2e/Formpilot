@@ -132,7 +132,7 @@ function FieldRow({ field }: { field: ProfileField }) {
 
 export function ProfilePage() {
   usePageMeta({ title: 'My Profile', path: '/profile' })
-  const { data, mode } = useWorkspace()
+  const { data } = useWorkspace()
   if (!data) return null
   const completion = profileCompleteness(data.profile)
   const verified = data.profile.filter((f) => f.verified && f.value).length
@@ -200,7 +200,7 @@ export function ProfilePage() {
             </Link>
           ))}
         </div>
-        {mode === 'account' && <p className="mt-4 text-[13px] text-subtle">Edits are saved to your FormPilot account.</p>}
+        <p className="mt-4 text-[13px] text-subtle">Edits are saved to your FormPilot account.</p>
       </Card>
     </div>
   )

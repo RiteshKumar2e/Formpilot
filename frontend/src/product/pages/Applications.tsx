@@ -20,7 +20,7 @@ const FILTERS: { id: ApplicationStatus | 'all'; label: string }[] = [
 
 export function ApplicationsPage() {
   usePageMeta({ title: 'Applications', path: '/applications' })
-  const { data, mode } = useWorkspace()
+  const { data } = useWorkspace()
   const [filter, setFilter] = useState<ApplicationStatus | 'all'>('all')
   if (!data) return null
   const apps = [...data.applications].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
@@ -126,7 +126,7 @@ export function ApplicationsPage() {
           })}
         </ul>
       )}
-      {mode === 'account' && <p className="text-[13px] text-subtle">Applications are saved in this browser until the applications API is available.</p>}
+      <p className="text-[13px] text-subtle">Applications are saved in this browser until the applications API is available.</p>
     </div>
   )
 }

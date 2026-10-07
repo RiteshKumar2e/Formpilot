@@ -6,13 +6,11 @@ import {
   Bell,
   ClipboardList,
   FileText,
-  FlaskConical,
   GitCompareArrows,
   HelpCircle,
   LayoutDashboard,
   LogOut,
   Menu,
-  RotateCcw,
   Search,
   Settings,
   ShieldCheck,
@@ -20,12 +18,11 @@ import {
   X,
 } from 'lucide-react'
 import { LogoMark } from '../components/ui/Logo'
-import { Button } from '../components/ui/Button'
 import { useAuth } from '../hooks/useAuth'
 import { cn } from '../lib/utils'
 import { useWorkspace } from './workspace'
 import { ErrorPanel, Skeleton } from './ui'
-import { DemoGuide } from './DemoGuide'
+import { HelpPanel } from './HelpPanel'
 
 const NAV = [
   { to: '/dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -48,7 +45,7 @@ function initials(name: string) {
 }
 
 function SidebarContent({ onNavigate, onHelp }: { onNavigate?: () => void; onHelp: () => void }) {
-  const { data, mode, leave, resetDemo } = useWorkspace()
+  const { data, close } = useWorkspace()
   const { signOut } = useAuth()
   const navigate = useNavigate()
   const issues = data?.applications.filter((a) => a.status === 'needs_review').length ?? 0
@@ -96,20 +93,6 @@ function SidebarContent({ onNavigate, onHelp }: { onNavigate?: () => void; onHel
           <HelpCircle className="size-4" aria-hidden />
           Help &amp; Support
         </button>
-        {mode === 'demo' && (
-          <button
-            type="button"
-            onClick={() => {
-              resetDemo()
-              navigate('/dashboard')
-              onNavigate?.()
-            }}
-            className="flex w-full items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-[14px] text-muted hover:bg-ink/[0.04] hover:text-ink"
-          >
-            <RotateCcw className="size-4" aria-hidden />
-            Reset demo data
-          </button>
-        )}
         {data && (
           <div className="mt-2 flex items-center gap-3 rounded-[var(--radius-control)] border border-line bg-surface p-2.5">
             <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[12px] font-semibold text-accent">{initials(data.user.name)}</span>
@@ -120,13 +103,13 @@ function SidebarContent({ onNavigate, onHelp }: { onNavigate?: () => void; onHel
             <button
               type="button"
               onClick={async () => {
-                if (mode === 'account') await signOut()
-                leave()
+                await signOut()
+                close()
                 navigate('/')
               }}
               className="inline-flex size-8 items-center justify-center rounded-[var(--radius-control)] text-subtle hover:bg-sunken hover:text-ink"
-              aria-label={mode === 'demo' ? 'Exit demo' : 'Sign out'}
-              title={mode === 'demo' ? 'Exit demo' : 'Sign out'}
+              aria-label="Sign out"
+              title="Sign out"
             >
               <LogOut className="size-4" aria-hidden />
             </button>
@@ -273,46 +256,18 @@ function Notifications() {
   )
 }
 
-function ChooseMode() {
-  const { startDemo } = useWorkspace()
-  const navigate = useNavigate()
-  return (
-    <div className="flex min-h-dvh items-center justify-center bg-canvas px-4">
-      <div className="w-full max-w-md rounded-[var(--radius-panel)] border border-line bg-surface p-8 text-center shadow-[var(--shadow-card)]">
-        <LogoMark className="mx-auto size-10" />
-        <h1 className="mt-5 text-[22px] font-semibold text-ink">Open your FormPilot workspace</h1>
-        <p className="mt-2 text-[15px] text-muted">Sign in to your account, or explore the product with a ready-made demo profile.</p>
-        <div className="mt-6 grid gap-2">
-          <Button
-            onClick={() => {
-              startDemo()
-              navigate('/dashboard')
-            }}
-          >
-            <FlaskConical className="size-4" aria-hidden />
-            Start Product Demo
-          </Button>
-          <Button to="/login" variant="secondary">
-            Sign in
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export function AppLayout() {
-  const { mode, data, loading, error, enterAccount, reload, leave } = useWorkspace()
+  const { data, loading, error, open, reload, close } = useWorkspace()
   const { user, loading: authLoading } = useAuth()
   const [mobileNav, setMobileNav] = useState(false)
   const [guide, setGuide] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
 
-  // A signed-in user returning to the app goes straight into account mode.
+  // Load the signed-in user's workspace.
   useEffect(() => {
-    if (!mode && user) enterAccount(user)
-  }, [mode, user, enterAccount])
+    if (user) open(user)
+  }, [user, open])
 
   useEffect(() => setMobileNav(false), [location.pathname])
 
@@ -323,14 +278,8 @@ export function AppLayout() {
     return () => window.removeEventListener('keydown', esc)
   }, [mobileNav])
 
-  if (!mode) {
-    if (authLoading || user) return <AppSkeleton />
-    return <ChooseMode />
-  }
-
-  if (mode === 'account' && !user && !authLoading) {
-    return <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />
-  }
+  if (authLoading) return <AppSkeleton />
+  if (!user) return <Navigate to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`} replace />
 
   let body: ReactNode
   if (error && !data) {
@@ -339,7 +288,7 @@ export function AppLayout() {
         error={error}
         onRetry={() => void reload()}
         onSignIn={() => {
-          leave()
+          close()
           navigate('/login')
         }}
       />
@@ -355,7 +304,7 @@ export function AppLayout() {
               error={error}
               onRetry={() => void reload()}
               onSignIn={() => {
-                leave()
+                close()
                 navigate('/login')
               }}
             />
@@ -425,17 +374,6 @@ export function AppLayout() {
               <SearchBox />
             </div>
             <div className="ml-auto flex items-center gap-2">
-              {mode === 'demo' && (
-                <button
-                  type="button"
-                  onClick={() => setGuide(true)}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-warning-line bg-warning-soft px-2.5 py-1 text-[12px] font-medium text-warning hover:border-warning"
-                  title="You’re using sample data. Open the demo guide."
-                >
-                  <FlaskConical className="size-3.5" aria-hidden />
-                  Demo Mode
-                </button>
-              )}
               <Notifications />
               {data && (
                 <Link to="/settings" className="flex size-9 items-center justify-center rounded-full bg-accent-soft text-[12px] font-semibold text-accent" aria-label="Account settings">
@@ -454,7 +392,7 @@ export function AppLayout() {
         </main>
       </div>
 
-      <DemoGuide open={guide} onClose={() => setGuide(false)} />
+      <HelpPanel open={guide} onClose={() => setGuide(false)} />
     </div>
   )
 }

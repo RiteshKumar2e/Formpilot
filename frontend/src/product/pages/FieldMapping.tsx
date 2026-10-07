@@ -67,7 +67,7 @@ function MappingRow({ field, appId }: { field: ApplicationField; appId: string }
 
 export function FieldMappingPage() {
   usePageMeta({ title: 'Field Mapping', path: '/mapping' })
-  const { data, mode } = useWorkspace()
+  const { data } = useWorkspace()
   const [params, setParams] = useSearchParams()
   const apps = data?.applications ?? []
   const app = apps.find((a) => a.id === params.get('app')) ?? apps.find((a) => a.status === 'needs_review') ?? apps[0]
@@ -167,9 +167,7 @@ export function FieldMappingPage() {
       </Card>
 
       <p className="text-[13px] leading-relaxed text-subtle">
-        {mode === 'demo'
-          ? 'In Demo Mode, retrieval and matching run in your browser: each question is scored against every profile field using known phrasings and text similarity. The production design replaces this scoring with embeddings and vector search behind the same interface.'
-          : 'Mapping for your account runs on the FormPilot API.'}
+        Each question is scored against every field in your profile on the FormPilot API, using known phrasings and text similarity. The production design adds embeddings and vector search behind the same interface.
       </p>
     </div>
   )

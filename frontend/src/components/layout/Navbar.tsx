@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Logo } from '../ui/Logo'
 import { Button } from '../ui/Button'
 import { CloseIcon, MenuIcon } from '../ui/Icons'
 import { Container } from '../ui/primitives'
 import { useAuth } from '../../hooks/useAuth'
-import { useWorkspace } from '../../product/workspace'
 
 export const NAV_LINKS = [
   { label: 'Home', to: '/' },
@@ -19,12 +18,6 @@ export function Navbar() {
   const [open, setOpen] = useState(false)
   const location = useLocation()
   const { user } = useAuth()
-  const { mode, startDemo } = useWorkspace()
-  const navigate = useNavigate()
-  const openDemo = () => {
-    startDemo()
-    navigate('/dashboard')
-  }
 
   useEffect(() => setOpen(false), [location.pathname, location.hash])
 
@@ -41,7 +34,7 @@ export function Navbar() {
     setOpen(false)
   }
 
-  const inApp = mode === 'demo' || (mode === 'account' && user)
+  const inApp = Boolean(user)
   const primary = inApp ? { to: '/dashboard', label: 'Open dashboard' } : { to: '/signup', label: 'Get Started' }
 
   return (
@@ -70,9 +63,6 @@ export function Navbar() {
         <div className="hidden items-center gap-6 lg:flex">
           {!inApp && (
             <>
-              <button type="button" onClick={openDemo} className="text-[15px] text-accent hover:underline">
-                Try Demo
-              </button>
               <Link to="/login" className="text-[15px] text-ink-2 hover:text-ink">
                 Sign In
               </Link>
@@ -118,11 +108,6 @@ export function Navbar() {
           <Button to={primary.to} className="mt-4 w-full">
             {primary.label}
           </Button>
-          {!inApp && (
-            <Button variant="secondary" className="mt-2 w-full" onClick={openDemo}>
-              Start Product Demo
-            </Button>
-          )}
         </Container>
       </div>
     </header>

@@ -62,7 +62,7 @@ export function ValidationPreview() {
               Add Information
             </span>
           </div>
-          <figcaption className="text-[13px] text-subtle">Examples from the demo workspace, with sample data.</figcaption>
+          <figcaption className="text-[13px] text-subtle">Illustration with sample data.</figcaption>
         </figure>
       </Container>
     </Section>

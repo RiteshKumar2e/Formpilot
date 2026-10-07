@@ -60,13 +60,12 @@ function readPrefs() {
 
 export function SettingsPage() {
   usePageMeta({ title: 'Settings', path: '/settings' })
-  const { data, mode, resetDemo, leave } = useWorkspace()
+  const { data, close } = useWorkspace()
   const { setUser } = useAuth()
   const navigate = useNavigate()
   const [prefs, setPrefs] = useState(readPrefs)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [resetDone, setResetDone] = useState(false)
   if (!data) return null
 
   const setPref = (key: 'review' | 'processed' | 'weekly', value: boolean) => {
@@ -84,7 +83,7 @@ export function SettingsPage() {
     try {
       await api.auth.deleteAccount()
       setUser(null)
-      leave()
+      close()
       navigate('/')
     } catch (err) {
       setDeleteError(err instanceof ApiError ? err.message : 'Couldn’t delete your account. Please try again.')
@@ -102,7 +101,9 @@ export function SettingsPage() {
         <Row label="Email">
           <span className="text-[15px] text-ink-2">{data.user.email}</span>
         </Row>
-        <Row label="Account type">{mode === 'demo' ? <Badge tone="warning">Demo Mode</Badge> : <Badge tone="success">FormPilot account</Badge>}</Row>
+        <Row label="Account type">
+          <Badge tone="success">FormPilot account</Badge>
+        </Row>
       </Section>
 
       <Section title="Security" description="Protect access to your documents.">
@@ -116,7 +117,7 @@ export function SettingsPage() {
           </div>
         </Row>
         <Row label="Session" hint="Sessions expire after 12 hours.">
-          <span className="text-[14px] text-ink-2">{mode === 'demo' ? 'Local demo session' : 'Active'}</span>
+          <span className="text-[14px] text-ink-2">Active</span>
         </Row>
       </Section>
 
@@ -139,20 +140,6 @@ export function SettingsPage() {
         <Row label="Stored files" hint="Uploaded files are encrypted at rest.">
           <Badge tone="success">Encrypted</Badge>
         </Row>
-        {mode === 'demo' ? (
-          <Row label="Demo data" hint="Restore the original sample profile, documents and applications.">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                resetDemo()
-                setResetDone(true)
-              }}
-            >
-              {resetDone ? 'Demo data reset' : 'Reset demo data'}
-            </Button>
-          </Row>
-        ) : (
           <div className="py-3.5">
             <Row label="Delete account" hint="Permanently removes your profile, documents and extracted data.">
               {confirmDelete ? (
@@ -176,7 +163,6 @@ export function SettingsPage() {
               </p>
             )}
           </div>
-        )}
       </Section>
 
       <Section title="Connected Services" description="Import documents from where they already live.">
