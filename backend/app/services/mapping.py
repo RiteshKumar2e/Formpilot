@@ -1,23 +1,26 @@
-"""Maps free-text form field labels to profile fields.
+"""Maps free-text form field labels to profile concepts.
 
-The baseline matcher compares a label against known phrasings using token overlap and character
-trigrams, which handles rewordings like "Name of applicant" -> full name without any model. An
-embeddings provider (sentence-transformers, OpenAI, etc.) can be plugged in via `Embedder` to match
-labels the phrasing table doesn't cover; the vector index then lives in the vector database.
+Two matchers run in order. The lexical matcher compares a label with known phrasings using token
+overlap and character trigrams, which handles rewordings like "Name of applicant" -> full name. Labels
+it can't place go to the semantic matcher, which compares sentence embeddings, so "Technical
+proficiencies" or "Year in which you passed" still find the right concept. The semantic matcher only answers when one
+concept is clearly closer than the rest.
 """
 
 import re
-from typing import Protocol
+from functools import lru_cache
 
-from ..schemas import FieldMatchOut, ProfileOut
+import numpy as np
+
+from .embeddings import HashEmbedder, get_embedder
 from .fields import CONCEPTS
 
 MIN_SCORE = 0.45
 _STOPWORDS = {"the", "a", "an", "your", "you", "please", "enter", "provide", "of", "applicant's", "s", "current", "full"}
-
-
-class Embedder(Protocol):
-    def embed(self, texts: list[str]) -> list[list[float]]: ...
+# Semantic matching: minimum cosine similarity, and how far ahead of the runner-up concept it must be.
+# Tuned on eval/form_labels.json for few wrong fills over maximum coverage (see eval/run_eval.py).
+SEMANTIC_MIN = 0.76
+SEMANTIC_MARGIN = 0.02
 
 
 def _tokens(text: str) -> set[str]:
@@ -49,27 +52,35 @@ def classify(label: str) -> tuple[str | None, float]:
     return (best_key, best_score) if best_score >= MIN_SCORE else (None, best_score)
 
 
-def match_fields(labels: list[str], profile: ProfileOut) -> list[FieldMatchOut]:
-    by_key = {f.key: f for f in profile.fields}
-    conflicted = {c.key for c in profile.conflicts}
-    matches = []
-    for label in labels:
-        key, score = classify(label)
-        field = by_key.get(key) if key else None
-        if field is None:
-            matches.append(
-                FieldMatchOut(
-                    form_label=label, key=key, value=None, confidence=0.0, source_filename=None, needs_review=key in conflicted
-                )
-            )
-            continue
-        matches.append(
-            FieldMatchOut(
-                form_label=label,
-                key=key,
-                value=field.value,
-                confidence=round(min(1.0, score) * field.confidence, 2),
-                source_filename=field.source_filename,
-            )
-        )
-    return matches
+@lru_cache(maxsize=4)
+def _concept_vectors(embedder_name: str) -> tuple[list[str], np.ndarray]:
+    keys = [key for key, phrasings in CONCEPTS.items() for _ in phrasings]
+    phrases = [phrase for phrasings in CONCEPTS.values() for phrase in phrasings]
+    return keys, get_embedder().embed(phrases)
+
+
+def semantic_classify(label: str) -> tuple[str | None, float]:
+    embedder = get_embedder()
+    if isinstance(embedder, HashEmbedder):
+        return None, 0.0  # hashing only captures spelling, which the lexical matcher already covers
+    keys, vectors = _concept_vectors(embedder.name)
+    scores = vectors @ embedder.embed([label])[0]
+    best: dict[str, float] = {}
+    for key, score in zip(keys, scores):
+        best[key] = max(best.get(key, -1.0), float(score))
+    ranked = sorted(best.items(), key=lambda kv: kv[1], reverse=True)
+    (top_key, top), (_, second) = ranked[0], ranked[1]
+    if top >= SEMANTIC_MIN and top - second >= SEMANTIC_MARGIN:
+        return top_key, top
+    return None, top
+
+
+def classify_hybrid(label: str) -> tuple[str | None, float, str]:
+    """Returns (concept key, score, matcher) where matcher is "lexical" or "semantic"."""
+    key, score = classify(label)
+    if key:
+        return key, score, "lexical"
+    key, sem = semantic_classify(label)
+    if key:
+        return key, sem, "semantic"
+    return None, score, "lexical"

@@ -1,10 +1,12 @@
-import { useCallback, useMemo, useRef, useState, type DragEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { CheckCircle2, FileImage, FileText, FileUp, Loader2, Plus, Trash2, UploadCloud } from 'lucide-react'
+import { CheckCircle2, CircleSlash, FileImage, FileText, FileUp, Loader2, Plus, Trash2, UploadCloud, XCircle } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { usePageMeta } from '../../hooks/usePageMeta'
+import { api } from '../../lib/api'
 import { cn } from '../../lib/utils'
+import type { WorkflowRun } from '../../types/api'
 import { UPLOAD_STAGES, useWorkspace, WorkspaceError, type UploadStage } from '../workspace'
 import { formatDateTime, timeAgo } from '../selectors'
 import type { DocumentCategory, DocumentItem } from '../types'
@@ -155,6 +157,56 @@ function UploadFlow({ onDone }: { onDone: (doc: DocumentItem) => void }) {
   )
 }
 
+const STEP_LABEL: Record<string, string> = {
+  read_text: 'Read text (PDF / OCR)',
+  rule_extraction: 'Pattern extraction',
+  llm_extraction: 'AI extraction (LLM)',
+  validation: 'Confidence check',
+  vector_indexing: 'Indexed for semantic search',
+}
+
+/** The steps FormPilot ran on this document, from the workflow engine. */
+function ProcessingPipeline({ docId }: { docId: string }) {
+  const [run, setRun] = useState<WorkflowRun | null | undefined>(undefined)
+  useEffect(() => {
+    let active = true
+    api.workflows.list(docId).then(
+      (runs) => active && setRun(runs[0] ?? null),
+      () => active && setRun(null),
+    )
+    return () => {
+      active = false
+    }
+  }, [docId])
+
+  if (!run) return null
+  return (
+    <div>
+      <h3 className="text-[15px] font-semibold text-ink">Processing pipeline</h3>
+      <ol className="mt-3 space-y-2">
+        {run.steps.map((step) => {
+          const Icon = step.status === 'completed' ? CheckCircle2 : step.status === 'failed' ? XCircle : CircleSlash
+          return (
+            <li key={step.name} className="flex gap-3 text-[14px]">
+              <Icon
+                className={cn('mt-0.5 size-4 shrink-0', step.status === 'completed' ? 'text-success' : step.status === 'failed' ? 'text-danger' : 'text-subtle')}
+                aria-label={step.status}
+              />
+              <div className="min-w-0">
+                <p className="text-ink">
+                  {STEP_LABEL[step.name] ?? step.name}
+                  {step.status !== 'skipped' && <span className="text-subtle"> · {step.duration_ms} ms</span>}
+                </p>
+                {step.detail && <p className="text-[13px] text-subtle">{step.detail}</p>}
+              </div>
+            </li>
+          )
+        })}
+      </ol>
+    </div>
+  )
+}
+
 function DocumentDetail({ doc }: { doc: DocumentItem }) {
   const usedIn = useWorkspace().data?.applications.filter((a) => a.fields.some((f) => f.source === doc.name)) ?? []
   const avg = doc.extracted.length ? doc.extracted.reduce((s, e) => s + e.confidence, 0) / doc.extracted.length : null
@@ -195,6 +247,8 @@ function DocumentDetail({ doc }: { doc: DocumentItem }) {
           {doc.message}
         </p>
       )}
+
+      <ProcessingPipeline docId={doc.id} />
 
       <div>
         <h3 className="text-[15px] font-semibold text-ink">Extracted information</h3>

@@ -7,7 +7,7 @@ from ..deps import get_current_user
 from ..models import ProfileChoice, User
 from ..schemas import MappingIn, MappingOut, ProfileOut, ResolveConflictIn
 from ..services.fields import FIELD_LABELS, MULTI_VALUE_FIELDS
-from ..services.mapping import match_fields
+from ..services.rag import map_fields as rag_map_fields
 from ..services.profile import build_profile
 
 router = APIRouter(tags=["profile"])
@@ -33,5 +33,7 @@ def resolve_conflict(payload: ResolveConflictIn, user: User = Depends(get_curren
 
 @router.post("/mapping", response_model=MappingOut)
 def map_fields(payload: MappingIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> MappingOut:
-    return MappingOut(matches=match_fields(payload.fields, build_profile(db, user)))
+    """Maps form labels to the user's details using retrieval-augmented generation (see services/rag.py)."""
+    matches, workflow_id = rag_map_fields(db, user, payload.fields, payload.application_id)
+    return MappingOut(matches=matches, workflow_id=workflow_id)
 

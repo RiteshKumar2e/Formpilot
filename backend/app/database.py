@@ -1,29 +1,46 @@
 from collections.abc import Iterator
 
 from sqlalchemy import create_engine, event
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-from .config import get_settings
+from . import libsql_dialect  # noqa: F401  (registers sqlite+libsql)
+from .config import Settings, get_settings
 
 
 class Base(DeclarativeBase):
     pass
 
 
-def _make_engine(url: str):
-    if url.startswith("sqlite"):
-        engine = create_engine(url, connect_args={"check_same_thread": False})
+def make_engine(settings: Settings) -> Engine:
+    if settings.turso_database_url:
+        import libsql
 
-        @event.listens_for(engine, "connect")
-        def _enable_foreign_keys(dbapi_conn, _record):  # pragma: no cover - driver hook
-            dbapi_conn.execute("PRAGMA foreign_keys=ON")
+        def connect():
+            return libsql.connect(settings.turso_database_url, auth_token=settings.turso_auth_token)
 
-        return engine
-    return create_engine(url, pool_pre_ping=True)
+        engine = create_engine("sqlite+libsql://", creator=connect, pool_pre_ping=True)
+    elif settings.database_url.startswith("sqlite+libsql"):
+        engine = create_engine(settings.database_url)
+    elif settings.database_url.startswith("sqlite"):
+        engine = create_engine(settings.database_url, connect_args={"check_same_thread": False})
+    else:
+        return create_engine(settings.database_url, pool_pre_ping=True)
+
+    @event.listens_for(engine, "connect")
+    def _enable_foreign_keys(dbapi_conn, _record):  # pragma: no cover - driver hook
+        dbapi_conn.execute("PRAGMA foreign_keys=ON")
+
+    return engine
 
 
-engine = _make_engine(get_settings().database_url)
+engine = make_engine(get_settings())
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+
+
+def uses_libsql(bind) -> bool:
+    """libSQL (local file or Turso) has native vector functions; plain SQLite doesn't."""
+    return bind.dialect.driver == "libsql"
 
 
 def get_db() -> Iterator[Session]:

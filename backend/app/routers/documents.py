@@ -1,17 +1,17 @@
 from pathlib import PurePath
 
-from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from ..config import get_settings
 from ..database import get_db
 from ..deps import get_current_user
-from ..models import Document, ExtractedField, User
+from ..models import Document, User
 from ..ratelimit import upload_limit
 from ..schemas import DocumentOut
 from ..services import storage
-from ..services.extraction import process_document
+from ..services.ingest import ingest_document
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -49,7 +49,9 @@ def list_documents(user: User = Depends(get_current_user), db: Session = Depends
 
 
 @router.post("", response_model=DocumentOut, status_code=status.HTTP_201_CREATED, dependencies=[Depends(upload_limit)])
-def upload_document(file: UploadFile, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Document:
+def upload_document(
+    file: UploadFile, background: BackgroundTasks, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> Document:
     max_bytes = get_settings().max_upload_bytes
     # Sync endpoint: FastAPI runs it in a worker thread, so parsing never blocks the event loop.
     data = file.file.read(max_bytes + 1)
@@ -67,12 +69,7 @@ def upload_document(file: UploadFile, user: User = Depends(get_current_user), db
     db.flush()
     doc.storage_key = storage.save(user.id, doc.id, data)
 
-    result = process_document(data, content_type)
-    doc.status = result.status
-    doc.message = result.message
-    doc.page_count = result.page_count
-    for f in result.fields:
-        db.add(ExtractedField(document_id=doc.id, user_id=user.id, key=f.key, label=f.label, value=f.value, confidence=f.confidence))
+    ingest_document(db, doc, data, background)
     db.commit()
     return _owned_document(db, user, doc.id)
 

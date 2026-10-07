@@ -30,7 +30,7 @@ export function HelpPanel({ open, onClose }: { open: boolean; onClose: () => voi
         <p className="font-medium text-ink">Good to know</p>
         <ul className="mt-2 list-disc space-y-1.5 pl-5">
           <li>Documents and your profile are stored in your FormPilot account. Files are encrypted at rest.</li>
-          <li>Applications are saved in this browser for now.</li>
+          <li>Applications are saved to your account and encrypted at rest.</li>
           <li>FormPilot never submits anything. Approving marks an application “Ready for Submission”.</li>
         </ul>
       </div>

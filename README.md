@@ -12,7 +12,7 @@ Upload your documents once. FormPilot extracts your details into a verified prof
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-0e0e62?logo=typescript&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-0e0e62?logo=tailwindcss&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Python_3.10+-0e0e62?logo=fastapi&logoColor=white)
-![Tests](https://img.shields.io/badge/backend_tests-25_passing-1f7a4d)
+![Tests](https://img.shields.io/badge/backend_tests-45_passing-1f7a4d)
 ![License: MIT](https://img.shields.io/badge/license-MIT-ffc72c)
 
 </div>
@@ -52,12 +52,14 @@ Students, job seekers and professionals type the same facts into portal after po
 
 | | |
 | --- | --- |
-| **Document extraction** | Reads PDFs (and scanned images when OCR is enabled) and extracts name, contact details, date of birth, degree, institution, graduation year, experience, skills and profile links, each with a confidence score. |
+| **Document extraction** | Reads PDFs (and scanned images when OCR is enabled). Pattern rules and an LLM on Groq extract name, contact details, date of birth, degree, institution, graduation year, experience, skills and profile links, each with a confidence score. Every LLM value must appear in the document or it is discarded. |
 | **Reusable profile** | Merges details from all your documents into one profile. Every value lists the documents it came from. |
 | **Conflict detection** | When two documents disagree (for example, two different dates of birth), FormPilot shows both values with their sources and asks you to choose. Your choice is saved and applied everywhere. |
-| **Semantic field mapping** | Matches free-text form labels to your profile by meaning, so "Latest degree earned" and "Highest qualification" get the same answer. |
+| **Semantic field mapping (RAG)** | Matches form labels to your details by wording and by meaning (local embeddings), retrieves the most relevant passages from your documents from Turso's vector search, and lets the LLM choose each answer. Answers must trace back to your profile or a passage. |
 | **Validation** | Before approval, every application is checked for conflicts, missing required fields and low-confidence matches, each with a one-click fix. |
 | **Human approval** | You review every answer and approve explicitly. FormPilot never submits anything; approval marks an application *Ready for Submission*. |
+| **Workflow engine** | Every document and form runs through recorded steps (read, extract, validate, index; retrieve, classify, generate, validate), visible in the app and the API. |
+| **Integrations** | Signed webhooks for document and application events, and an autofill API that returns approved answers as label/value pairs. |
 
 ## Screenshots
 
@@ -71,22 +73,27 @@ Real captures of the app with sample documents. Mobile versions are in [`fronten
 
 ```mermaid
 flowchart LR
-    A[Upload documents] --> B[Extract details]
+    A[Upload documents] --> B[Extract: rules + LLM]
+    B --> V[(Turso: encrypted data + vectors)]
     B --> C[Build profile]
     C --> D{Documents agree?}
     D -- No --> E[You choose the value]
     E --> C
-    D -- Yes --> F[Map form fields]
+    D -- Yes --> F[Map fields: embeddings + RAG]
+    V -. retrieve passages .-> F
     F --> G[Validate]
     G --> H[You review and approve]
     H --> I[Ready for Submission]
 ```
 
 1. **Upload.** PDF, JPG or PNG up to 10 MB. The file type is checked from its bytes, and the file is encrypted before it is written to disk.
-2. **Extract.** The PDF text layer (or OCR text) is parsed into structured fields with confidence scores. Ambiguous values, such as `12/05/2003`, are flagged for review.
-3. **Build the profile.** Values from all documents are merged. Identical values list every source; different values become a conflict.
-4. **Map.** Each form label is classified against a table of known phrasings using token overlap and character-trigram similarity, then answered from the profile.
-5. **Validate and approve.** Conflicts and missing required fields block approval until resolved. Optional fields (such as GitHub) never block.
+2. **Extract.** The PDF text layer (or OCR text) is parsed by pattern rules and, when `GROQ_API_KEY` is set, by an LLM with a strict JSON schema. Results are merged field by field: agreement raises confidence, disagreement lowers it so you check, and any LLM value that can't be found in the document is dropped. Ambiguous values, such as `12/05/2003`, are flagged for review.
+3. **Index.** The text is split into passages, embedded locally with `BAAI/bge-small-en-v1.5` (fastembed), and stored in Turso as `F32_BLOB` vectors.
+4. **Build the profile.** Values from all documents are merged. Identical values list every source; different values become a conflict.
+5. **Map (RAG).** Each form label is classified by wording (token and trigram overlap), then by meaning (embedding similarity) if wording fails. The label is embedded and the closest passages are retrieved with `vector_distance_cos`. The LLM sees the profile plus those passages and picks each answer; FormPilot accepts an answer only if it equals a profile value or appears in a retrieved passage. Conflicted fields are never filled.
+6. **Validate and approve.** Conflicts and missing required fields block approval until resolved. Optional fields (such as GitHub) never block.
+
+Without a Groq key, steps 2 and 5 run without the LLM: rules, embeddings and retrieval still work.
 
 ## Tech stack
 
@@ -94,10 +101,13 @@ flowchart LR
 | --- | --- |
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS 4, React Router 7, Framer Motion, Lucide icons |
 | Backend | Python 3.10+, FastAPI, SQLAlchemy 2, Pydantic 2 |
-| Database | SQLite for local development, PostgreSQL in production |
-| Documents | pypdf for text extraction, optional Tesseract OCR, Fernet (cryptography) for encryption at rest |
-| Auth | scrypt password hashing, JWT session in an httpOnly cookie |
-| Testing | pytest with the FastAPI TestClient |
+| AI / ML | LLM on Groq (`openai/gpt-oss-120b`, strict JSON schema), local embeddings (fastembed, `bge-small-en-v1.5`), semantic search and RAG |
+| Database | Turso (libSQL) with native vector search; a local libSQL file in development |
+| Documents | pypdf for text extraction, optional Tesseract OCR |
+| Automation | Workflow engine with recorded steps, signed webhooks, autofill API |
+| Auth & security | scrypt passwords, JWT session in an httpOnly cookie, Sign in with Google (OAuth 2.0 + PKCE), Fernet encryption of files and personal data |
+| Deployment | Docker images and `docker-compose.yml` |
+| Testing | pytest with the FastAPI TestClient, plus an accuracy eval (`backend/eval/`) |
 
 ## Getting started
 
@@ -118,11 +128,11 @@ cd Formpilot
 ```bash
 cd backend
 pip install -r requirements.txt
-cp .env.example .env                 # optional for local development
+cp .env.example .env                 # then add your Turso and Groq keys (both optional locally)
 uvicorn app.main:app --reload --port 8000
 ```
 
-Interactive API docs: http://localhost:8000/api/docs (disabled in production).
+The first start downloads the embedding model (about 70 MB) once. Interactive API docs: http://localhost:8000/api/docs (disabled in production).
 
 ### 3. Frontend (port 5173)
 
@@ -144,6 +154,28 @@ pip install -r requirements-ocr.txt
 
 Also install the [Tesseract](https://github.com/tesseract-ocr/tesseract) binary. Without it, images upload successfully but are marked *needs review* with no details extracted.
 
+### Turso database
+
+```bash
+turso db create formpilot
+turso db show formpilot --url          # -> TURSO_DATABASE_URL
+turso db tokens create formpilot       # -> TURSO_AUTH_TOKEN
+```
+
+Put both in `backend/.env`. Tables are created on first start. Without them, the backend uses a local libSQL file (`formpilot.db`) with the same engine and vector search.
+
+### Groq LLM
+
+Create a key at [console.groq.com/keys](https://console.groq.com/keys) and set `GROQ_API_KEY` in `backend/.env`. Settings → AI engine in the app shows what is active.
+
+### Docker
+
+```bash
+docker compose up --build              # http://localhost:8080
+```
+
+The frontend container serves the build with nginx and proxies `/api` to the backend container. Secrets are read from `backend/.env`.
+
 ## Configuration
 
 ### Backend (`backend/.env`)
@@ -152,9 +184,19 @@ Also install the [Tesseract](https://github.com/tesseract-ocr/tesseract) binary.
 | --- | --- | --- |
 | `ENVIRONMENT` | `development` | Set to `production` to enforce production checks. |
 | `SECRET_KEY` | dev-only key | Signs session tokens. **Required in production.** |
-| `FILE_ENCRYPTION_KEY` | derived in dev | Fernet key for encrypting uploads. **Required in production.** |
-| `DATABASE_URL` | `sqlite:///./formpilot.db` | e.g. `postgresql+psycopg://user:pass@host:5432/formpilot` |
+| `FILE_ENCRYPTION_KEY` | derived in dev | Fernet key for encrypting uploads and personal data in the database. **Required in production.** |
+| `TURSO_DATABASE_URL` | empty | Turso database, e.g. `libsql://formpilot-<org>.turso.io`. Takes priority over `DATABASE_URL`. |
+| `TURSO_AUTH_TOKEN` | empty | Token from `turso db tokens create`. |
+| `DATABASE_URL` | `sqlite+libsql:///./formpilot.db` | Local libSQL file, used when Turso isn't configured. |
 | `STORAGE_DIR` | `./storage` | Where encrypted uploads are stored. |
+| `GROQ_API_KEY` | empty | Enables LLM extraction and RAG answers. Empty = rules and embeddings only. |
+| `LLM_MODEL` | `openai/gpt-oss-120b` | A Groq model that supports strict JSON-schema output. |
+| `EMBEDDING_PROVIDER` | `fastembed` | `fastembed` (local model) or `hash` (no download, spelling only). |
+| `EMBEDDING_MODEL` | `BAAI/bge-small-en-v1.5` | Must produce 384-dimensional vectors. |
+| `RAG_TOP_K` | `4` | Passages retrieved per form field. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | empty | Enable Sign in with Google. Redirect URI: `<APP_URL>/api/auth/oauth/google/callback`. |
+| `APP_URL` | `http://localhost:5173` | Public URL of the web app (OAuth returns here). |
+| `API_PUBLIC_URL` | `APP_URL` | Public URL of the API, if it isn't served under `APP_URL/api`. |
 | `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated allowed frontend origins. |
 | `COOKIE_SECURE` | `false` | Must be `true` in production (HTTPS only). |
 | `ENFORCE_HTTPS` | on in production | Redirects HTTP to HTTPS and sends HSTS. |
@@ -193,9 +235,9 @@ Only `VITE_`-prefixed variables reach the browser. No secrets are shipped to the
 | `/mapping` | Field → match → source → confidence for every field of an application |
 | `/validation` | Conflicts and missing information, each with a fix |
 | `/applications/:id/review` | Final review, explicit approval, and the *Ready for Submission* confirmation |
-| `/activity`, `/settings` | A timeline of everything that happened; account, security, notifications and privacy |
+| `/activity`, `/settings` | A timeline of everything that happened; account, security, AI engine status, webhooks, notifications and privacy |
 
-Applications are currently saved in the browser per account; documents, the profile, conflicts and mapping live on the backend.
+Documents, the profile, conflicts, mapping and applications live on the backend. Only the activity log is kept in the browser.
 
 ## API reference
 
@@ -214,9 +256,22 @@ All endpoints are under `/api`. Authenticated endpoints use the `fp_session` htt
 | `DELETE` | `/documents/{id}` | ✓ | Delete a document and its extracted details |
 | `GET` | `/profile` | ✓ | Merged profile, conflicts and completeness |
 | `POST` | `/profile/conflicts/resolve` | ✓ | Choose or set the value for a profile field |
-| `POST` | `/mapping` | ✓ | Map form field labels to profile values |
+| `POST` | `/mapping` | ✓ | Map form field labels to values (RAG). Returns method, reasoning and evidence per field |
+| `GET` | `/auth/providers` | | Which sign-in providers are configured |
+| `GET` | `/auth/oauth/google/start` | | Start Sign in with Google |
+| `GET` | `/applications` | ✓ | List applications |
+| `PUT` | `/applications/{id}` | ✓ | Create or update an application (stored encrypted) |
+| `DELETE` | `/applications/{id}` | ✓ | Delete an application |
+| `GET` | `/applications/{id}/autofill` | ✓ | Answers as label/value pairs for filling the real form |
+| `GET` | `/workflows` | ✓ | Recent workflow runs with each step's status (`?subject_id=` for one document or application) |
+| `GET` | `/integrations/webhooks` | ✓ | List webhooks and recent deliveries |
+| `POST` | `/integrations/webhooks` | ✓ | Add a webhook; returns its signing secret once |
+| `DELETE` | `/integrations/webhooks/{id}` | ✓ | Remove a webhook |
+| `GET` | `/system/capabilities` | ✓ | Which AI components are active |
 | `POST` | `/contact` | | Send a contact message |
 | `GET` | `/health` | | Health check |
+
+Webhooks are JSON `POST`s with `X-FormPilot-Event` and `X-FormPilot-Signature: sha256=<HMAC-SHA256 of the body with your secret>`. Events: `document.processed`, `application.created`, `application.approved`, `application.deleted`.
 
 Example:
 
@@ -235,18 +290,31 @@ Formpilot/
 │   ├── app/
 │   │   ├── main.py              # App setup, CORS, security headers, HTTPS redirect
 │   │   ├── config.py            # Settings from environment, production checks
+│   │   ├── database.py          # Engine: Turso, local libSQL or SQLite
+│   │   ├── libsql_dialect.py    # SQLAlchemy dialect for libSQL
+│   │   ├── db_types.py          # Encrypted text/JSON columns, F32_BLOB vectors
 │   │   ├── models.py            # SQLAlchemy models
 │   │   ├── schemas.py           # Pydantic request and response schemas
-│   │   ├── security.py          # scrypt hashing, JWT sessions, file encryption
+│   │   ├── security.py          # scrypt hashing, JWT sessions, encryption
 │   │   ├── ratelimit.py         # Per-IP sliding-window rate limits
-│   │   ├── routers/             # auth, documents, profile and mapping, contact
+│   │   ├── routers/             # auth (+ Google OAuth), documents, profile/mapping,
+│   │   │                        # applications, integrations, system, contact
 │   │   └── services/
-│   │       ├── extraction.py    # PDF/OCR text and rule-based field extraction
+│   │       ├── ingest.py        # Document workflow: read, extract, validate, index
+│   │       ├── extraction.py    # PDF/OCR text, rule extraction, merging with the LLM
+│   │       ├── llm.py           # Groq calls with strict JSON schemas
+│   │       ├── embeddings.py    # Local embeddings (fastembed) and the hash fallback
+│   │       ├── vectorstore.py   # Passages and vector search in Turso
+│   │       ├── rag.py           # Form mapping: retrieve, classify, generate, validate
+│   │       ├── mapping.py       # Label classification by wording and by meaning
+│   │       ├── workflow.py      # Workflow engine with recorded steps
+│   │       ├── integrations.py  # Signed webhooks
 │   │       ├── profile.py       # Merging values and detecting conflicts
-│   │       ├── mapping.py       # Form-label classification and matching
 │   │       ├── fields.py        # Profile fields and known phrasings
 │   │       └── storage.py       # Encrypted file storage
+│   ├── eval/                    # Labelled forms and documents, accuracy script
 │   ├── tests/                   # pytest suite
+│   ├── Dockerfile
 │   └── requirements.txt
 └── frontend/
     ├── public/                  # Favicon, fonts, screenshots, robots.txt, sitemap.xml
@@ -260,25 +328,43 @@ Formpilot/
         │   └── pages/           # Dashboard, Profile, Documents, Applications, ...
         ├── lib/                 # API client, analytics, validation helpers
         └── index.css            # Design tokens: colors, radii, shadows
+docker-compose.yml               # Backend + frontend (nginx) containers
 ```
 
 ## Testing
 
 ```bash
-# Backend: 25 tests covering auth, uploads, extraction, conflicts, mapping, rate limits and HTTPS
+# Backend: 45 tests covering auth, Google OAuth, uploads, extraction, LLM grounding, RAG mapping,
+# vector search, workflows, webhooks, applications, encryption at rest, rate limits and HTTPS.
+# They run offline: LLM calls are faked and the hash embedder is used.
 cd backend
 python -m pytest -q
+
+# Accuracy, error and time-saved measurements on labelled forms and documents
+python eval/run_eval.py
 
 # Frontend: type-check and production build
 cd frontend
 npm run build
 ```
 
+Latest eval run (local embeddings, LLM off), 66 labels from 6 real-world style forms:
+
+| Matcher | Accuracy | Wrong fills | Misses |
+| --- | --- | --- | --- |
+| Wording only | 58% | 3 | 25 |
+| Wording + embeddings | 83% | 4 | 7 |
+
+Extraction with rules only: 83% precision, 74% recall on 27 labelled fields. The embedding thresholds were tuned on this same label set, so expect somewhat lower accuracy on new forms. Set `GROQ_API_KEY` and rerun to measure the LLM pipeline.
+
 ## Security
 
-- **Encryption at rest:** uploaded files are encrypted with Fernet before they are written to disk.
+- **Encryption at rest:** uploaded files, extracted values, document passages, applications and webhook secrets are encrypted with Fernet before they are written. Embedding vectors are stored unencrypted so the database can search them.
 - **Passwords:** hashed with scrypt; never stored in plain text.
 - **Sessions:** JWT in an httpOnly, SameSite=Lax cookie that page scripts can't read, with a 12-hour expiry.
+- **Sign in with Google:** authorization code flow with PKCE and a signed state cookie; accounts are linked only for Google-verified emails.
+- **LLM safety:** document text is passed to the model as data; every model answer must be found in the user's documents, and conflicts always go to the user.
+- **Webhooks:** HMAC-signed; in production only public `https` addresses are allowed, checked when added and again before each delivery.
 - **Isolation:** every document and profile request is scoped to the signed-in account.
 - **Upload validation:** the file type is detected from the file's bytes, not its name, with a 10 MB limit.
 - **Abuse protection:** per-IP rate limits on sign-up, sign-in, contact and uploads, and honeypot fields on public forms.
@@ -290,7 +376,7 @@ Found a security issue? Please email the address under [Contact](#contact) rathe
 ## Deployment
 
 - **Frontend:** any static host. [`vercel.json`](frontend/vercel.json), and [`_redirects`](frontend/public/_redirects) with [`_headers`](frontend/public/_headers) for Netlify, provide SPA routing, HSTS and asset caching.
-- **Backend:** any host that runs Python (Render, Railway, or a VM behind Nginx). Use PostgreSQL, set the production variables above, and set `TRUST_PROXY_HEADERS=true` behind a proxy.
+- **Backend:** any host that runs Python or Docker (Render, Railway, Fly.io, or a VM). Use Turso (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`), set the production variables above, and set `TRUST_PROXY_HEADERS=true` behind a proxy. `docker compose up --build` runs both services.
 - **Domain:** replace `https://formpilot.app` in `index.html`, `robots.txt`, `sitemap.xml` and `usePageMeta.ts` with your own.
 - **Before launch:** the Privacy Policy and Terms of Service in the app are drafts. Their highlighted placeholders need the operator's legal name, address, hosting region, retention periods and governing law, followed by a legal review.
 
@@ -298,11 +384,9 @@ Found a security issue? Please email the address under [Contact](#contact) rathe
 
 Everything described above is built and tested. Next:
 
-- [ ] Applications API (applications are currently saved in the browser)
 - [ ] Password reset by email and two-factor authentication
-- [ ] LLM-assisted extraction for documents with unusual layouts
-- [ ] Embeddings and vector search for matching (the `Embedder` interface in `services/mapping.py`)
 - [ ] Reading fields directly from PDF application forms
+- [ ] A larger, held-out eval set and LLM-on accuracy numbers
 - [ ] Filling forms on third-party sites, with approval for every submission
 - [ ] Imports from Google Drive and DigiLocker
 

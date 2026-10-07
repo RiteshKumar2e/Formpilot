@@ -1,7 +1,7 @@
 /**
  * Workspace state for the signed-in user.
- * Documents, profile, conflicts and field mapping come from the FastAPI backend.
- * Applications are not stored by the API yet, so they are saved in this browser, per account.
+ * Documents, profile, conflicts, field mapping and applications live in the FastAPI backend
+ * (applications are stored encrypted). Only the activity log is kept in this browser.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { api, ApiError } from '../lib/api'
@@ -216,13 +216,17 @@ function fromApiMatch(m: FieldMatch, profile: ProfileField[]): ApplicationField 
         : `No profile detail matches “${m.form_label}”. Add it here and it will be kept for this application.`,
     }
   }
+  const how =
+    m.method === 'semantic' ? ' by meaning' : m.method === 'llm_rag' ? ' by AI, checked against your documents' : ''
   return {
     ...base,
     value: m.value,
     status: m.confidence >= 0.8 ? 'mapped' : 'needs_review',
     source: m.source_filename,
     confidence: m.confidence,
-    reasoning: `“${m.form_label}” was matched to your ${m.key?.replace(/_/g, ' ')}, extracted from ${m.source_filename}.`,
+    reasoning:
+      m.reasoning ??
+      `“${m.form_label}” was matched${how} to your ${m.key?.replace(/_/g, ' ') ?? 'details'}, from ${m.source_filename}.`,
   }
 }
 
@@ -276,11 +280,39 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const dataRef = useRef(data)
   dataRef.current = data
 
-  // Applications and the local activity log are kept per account in this browser.
+  // The activity log is kept per account in this browser.
   useEffect(() => {
     if (!data) return
-    writeJson(APPS_KEY(data.user.email), data.applications)
     writeJson(ACTIVITY_KEY(data.user.email), data.activity)
+  }, [data])
+
+  // Applications are saved to the API shortly after they change. `synced` holds what the server has.
+  const synced = useRef(new Map<string, string>())
+  useEffect(() => {
+    if (!data) return
+    const timer = window.setTimeout(() => {
+      const current = new Map(data.applications.map((a) => [a.id, JSON.stringify(a)]))
+      for (const app of data.applications) {
+        const json = current.get(app.id)!
+        if (synced.current.get(app.id) === json) continue
+        api.applications
+          .save(app)
+          .then(() => synced.current.set(app.id, json))
+          .catch(() => {
+            /* Kept in memory; retried with the next change. */
+          })
+      }
+      for (const id of [...synced.current.keys()]) {
+        if (current.has(id)) continue
+        api.applications
+          .remove(id)
+          .then(() => synced.current.delete(id))
+          .catch((err) => {
+            if (err instanceof ApiError && err.status === 404) synced.current.delete(id)
+          })
+      }
+    }, 600)
+    return () => window.clearTimeout(timer)
   }, [data])
 
   // Clean up storage left by earlier builds that had a demo mode.
@@ -301,13 +333,35 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setLoading(true)
     setError(null)
     try {
-      const [docs, profile] = await Promise.all([api.documents.list(), api.profile.get()])
+      const [docs, profile, remoteApps] = await Promise.all([
+        api.documents.list(),
+        api.profile.get(),
+        api.applications.list<Application>(),
+      ])
       const saved = readJson<ActivityItem[]>(ACTIVITY_KEY(user.email))
+      // Earlier versions kept applications only in this browser: move them to the server once.
+      const localApps = readJson<Application[]>(APPS_KEY(user.email)) ?? []
+      const remoteIds = new Set(remoteApps.map((a) => a.id))
+      const toMigrate = localApps.filter((a) => !remoteIds.has(a.id))
+      const migrated = await Promise.allSettled(toMigrate.map((a) => api.applications.save(a)))
+      if (migrated.every((r) => r.status === 'fulfilled')) {
+        try {
+          localStorage.removeItem(APPS_KEY(user.email))
+        } catch {
+          /* ignore */
+        }
+      }
+      const applications = [...remoteApps, ...toMigrate]
+      synced.current = new Map(
+        applications
+          .filter((_app, i) => i < remoteApps.length || migrated[i - remoteApps.length]?.status === 'fulfilled')
+          .map((a) => [a.id, JSON.stringify(a)]),
+      )
       setData({
         user,
         profile: fromApiProfile(profile),
         documents: docs.map(fromApiDocument),
-        applications: readJson<Application[]>(APPS_KEY(user.email)) ?? [],
+        applications,
         activity: saved ?? docs.map((d) => ({ ...activity('document_uploaded', 'Document uploaded', d.filename), at: d.created_at })),
       })
     } catch (err) {
@@ -420,15 +474,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const cleaned = labels.map((l) => l.trim()).filter(Boolean)
       if (!cleaned.length) throw new WorkspaceError('No fields to map.', 'Add at least one form field.', 'retry')
 
+      const id = uid('app')
       let fields: ApplicationField[]
       try {
-        const { matches } = await api.mapping.match(cleaned)
+        const { matches } = await api.mapping.match(cleaned, id)
         fields = matches.map((m) => fromApiMatch(m, current.profile))
       } catch (err) {
         throw toWorkspaceError(err, 'Couldn’t map this application.')
       }
 
-      const id = uid('app')
       const app: Application = {
         id,
         title,

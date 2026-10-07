@@ -7,7 +7,14 @@ import pytest
 
 # Configure an isolated database and storage directory before the app is imported.
 _TMP = Path(tempfile.mkdtemp(prefix="formpilot-test-"))
-os.environ["DATABASE_URL"] = f"sqlite:///{_TMP / 'test.db'}"
+os.environ["DATABASE_URL"] = f"sqlite+libsql:///{_TMP / 'test.db'}"
+os.environ["TURSO_DATABASE_URL"] = ""
+# Tests run offline: no LLM calls, and the dependency-free embedder.
+os.environ["GROQ_API_KEY"] = ""
+os.environ["LLM_ENABLED"] = "false"
+os.environ["EMBEDDING_PROVIDER"] = "hash"
+os.environ["GOOGLE_CLIENT_ID"] = ""
+os.environ["GOOGLE_CLIENT_SECRET"] = ""
 os.environ["STORAGE_DIR"] = str(_TMP / "storage")
 os.environ["ENVIRONMENT"] = "development"
 os.environ["RATE_LIMIT_ENABLED"] = "false"  # enabled explicitly in the rate-limit test

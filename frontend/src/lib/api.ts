@@ -1,11 +1,15 @@
 import type {
+  Capabilities,
   ContactPayload,
   DocumentRecord,
-  FieldMatch,
+  MappingResponse,
   Profile,
   SignInPayload,
   SignUpPayload,
   User,
+  Webhook,
+  WebhookEvent,
+  WorkflowRun,
 } from '../types/api'
 
 /**
@@ -95,6 +99,9 @@ export const api = {
       request<User>('/auth/signin', { method: 'POST', body: JSON.stringify(payload) }),
     signOut: () => request<void>('/auth/signout', { method: 'POST' }),
     deleteAccount: () => request<void>('/auth/me', { method: 'DELETE' }),
+    providers: () => request<{ google: boolean }>('/auth/providers'),
+    /** Full-page navigation: the browser goes to Google and comes back signed in. */
+    googleSignInUrl: `${API_ROOT}/auth/oauth/google/start`,
   },
   documents: {
     list: () => request<DocumentRecord[]>('/documents'),
@@ -107,8 +114,27 @@ export const api = {
       request<Profile>('/profile/conflicts/resolve', { method: 'POST', body: JSON.stringify({ key, value }) }),
   },
   mapping: {
-    match: (fields: string[]) =>
-      request<{ matches: FieldMatch[] }>('/mapping', { method: 'POST', body: JSON.stringify({ fields }) }),
+    match: (fields: string[], applicationId?: string) =>
+      request<MappingResponse>('/mapping', { method: 'POST', body: JSON.stringify({ fields, application_id: applicationId }) }),
+  },
+  applications: {
+    list: <T,>() => request<T[]>('/applications'),
+    save: <T extends { id: string },>(app: T) =>
+      request<T>(`/applications/${encodeURIComponent(app.id)}`, { method: 'PUT', body: JSON.stringify(app) }),
+    remove: (id: string) => request<void>(`/applications/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  },
+  workflows: {
+    list: (subjectId?: string) =>
+      request<WorkflowRun[]>(`/workflows${subjectId ? `?subject_id=${encodeURIComponent(subjectId)}` : ''}`),
+  },
+  integrations: {
+    list: () => request<Webhook[]>('/integrations/webhooks'),
+    create: (url: string, events: WebhookEvent[]) =>
+      request<Webhook>('/integrations/webhooks', { method: 'POST', body: JSON.stringify({ url, events }) }),
+    remove: (id: string) => request<void>(`/integrations/webhooks/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  },
+  system: {
+    capabilities: () => request<Capabilities>('/system/capabilities'),
   },
   contact: {
     send: (payload: ContactPayload) =>

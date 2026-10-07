@@ -102,6 +102,7 @@ class ResolveConflictIn(BaseModel):
 
 class MappingIn(BaseModel):
     fields: list[str] = Field(min_length=1, max_length=100)
+    application_id: str | None = Field(default=None, max_length=64)
 
     @field_validator("fields")
     @classmethod
@@ -119,10 +120,99 @@ class FieldMatchOut(BaseModel):
     confidence: float
     source_filename: str | None
     needs_review: bool = False  # True when the profile has conflicting values for this field
+    method: Literal["llm_rag", "semantic", "lexical", "none"] = "lexical"
+    reasoning: str | None = None
+    evidence: str | None = None  # the retrieved passage that best supports the value
 
 
 class MappingOut(BaseModel):
     matches: list[FieldMatchOut]
+    workflow_id: str | None = None
+
+
+class WorkflowStepOut(BaseModel):
+    name: str
+    status: Literal["running", "completed", "failed", "skipped"]
+    detail: str | None
+    duration_ms: int
+
+
+class WorkflowRunOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    workflow: str
+    subject_id: str | None
+    status: str
+    steps: list[WorkflowStepOut]
+    started_at: datetime
+    finished_at: datetime | None
+
+
+ApplicationStatus = Literal["draft", "processing", "needs_review", "ready", "prepared"]
+
+
+class ApplicationIn(BaseModel):
+    """The web app's application record. Stored encrypted; only these fields are read by the server."""
+
+    model_config = ConfigDict(extra="allow")
+
+    id: str = Field(min_length=1, max_length=64)
+    title: str = Field(min_length=1, max_length=300)
+    status: ApplicationStatus
+    fields: list[dict] = Field(default_factory=list, max_length=200)
+
+
+class AutofillField(BaseModel):
+    label: str
+    value: str
+    section: str | None = None
+
+
+class AutofillOut(BaseModel):
+    application_id: str
+    title: str
+    organization: str | None
+    status: str
+    reference: str | None
+    fields: list[AutofillField]
+
+
+WebhookEvent = Literal["document.processed", "application.created", "application.approved", "application.deleted"]
+
+
+class WebhookIn(BaseModel):
+    url: str = Field(min_length=8, max_length=2000)
+    events: list[WebhookEvent] = Field(min_length=1)
+
+
+class WebhookDeliveryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    event: str
+    ok: bool
+    status_code: int | None
+    error: str | None
+    created_at: datetime
+
+
+class WebhookOut(BaseModel):
+    id: str
+    url: str
+    events: list[str]
+    active: bool
+    created_at: datetime
+    secret: str | None = None  # shown once, when the webhook is created
+    recent_deliveries: list[WebhookDeliveryOut] = []
+
+
+class CapabilitiesOut(BaseModel):
+    llm: dict
+    embeddings: dict
+    vector_store: str
+    database: str
+    ocr: bool
+    oauth: dict
 
 
 class ContactIn(BaseModel):

@@ -1,0 +1,86 @@
+{
+  "description": "Synthetic documents (no real people) with the profile values a careful person would extract.",
+  "documents": [
+    {
+      "name": "Resume, standard layout",
+      "lines": [
+        "Ritesh Kumar",
+        "Email: ritesh@example.com | Phone: +91 98765 43210",
+        "Date of Birth: 12 May 2002",
+        "linkedin.com/in/riteshkumar",
+        "Education",
+        "B.Tech in Computer Science, Northfield Institute of Technology",
+        "Year of passing: 2024",
+        "Experience",
+        "Research Intern - Machine Vision & Intelligence Lab   May 2024 - Jul 2024",
+        "Skills: Python, React, FastAPI, Machine Learning"
+      ],
+      "expected": {
+        "full_name": "Ritesh Kumar",
+        "email": "ritesh@example.com",
+        "phone": "+91 98765 43210",
+        "date_of_birth": "12 May 2002",
+        "linkedin": "linkedin.com/in/riteshkumar",
+        "highest_qualification": "B.Tech in Computer Science",
+        "institution": "Northfield Institute of Technology",
+        "graduation_year": "2024",
+        "experience": "Research Intern - Machine Vision & Intelligence Lab",
+        "skills": "Python, React, FastAPI, Machine Learning"
+      }
+    },
+    {
+      "name": "Resume, prose style",
+      "lines": [
+        "ASHA RAO",
+        "asha.rao@example.org  ·  +1 415 555 0134  ·  github.com/asharao",
+        "About me",
+        "I am a data analyst at Brightline Analytics where I build dashboards in SQL and Tableau.",
+        "I hold a Master of Science in Statistics from Lakeside University (graduated 2021).",
+        "Tools I use daily: SQL, Python, Tableau, dbt"
+      ],
+      "expected": {
+        "full_name": "Asha Rao",
+        "email": "asha.rao@example.org",
+        "phone": "+1 415 555 0134",
+        "github": "github.com/asharao",
+        "highest_qualification": "M.Sc in Statistics",
+        "institution": "Lakeside University",
+        "graduation_year": "2021",
+        "experience": "Data Analyst at Brightline Analytics",
+        "skills": "SQL, Python, Tableau, dbt"
+      }
+    },
+    {
+      "name": "Degree certificate",
+      "lines": [
+        "Northfield Institute of Technology",
+        "This is to certify that RITESH KUMAR has been awarded the degree of",
+        "Bachelor of Technology in Computer Science",
+        "Date of Birth: 25/05/2002",
+        "Awarded in the year 2024"
+      ],
+      "expected": {
+        "full_name": "Ritesh Kumar",
+        "highest_qualification": "B.Tech in Computer Science",
+        "institution": "Northfield Institute of Technology",
+        "date_of_birth": "25 May 2002",
+        "graduation_year": "2024"
+      }
+    },
+    {
+      "name": "Internship offer letter",
+      "lines": [
+        "Acme Robotics Pvt. Ltd.",
+        "HR contact: hr@acmerobotics.example, +91 80 4000 1234",
+        "Dear Neha Verma,",
+        "We are pleased to offer you the position of Software Engineering Intern at Acme Robotics.",
+        "Please reply to neha.verma@example.com to confirm."
+      ],
+      "expected": {
+        "full_name": "Neha Verma",
+        "email": "neha.verma@example.com",
+        "experience": "Software Engineering Intern at Acme Robotics"
+      }
+    }
+  ]
+}

@@ -19,11 +19,11 @@ const PRINCIPLES = [
 
 const PIPELINE = [
   { stage: 'Read', status: 'Built', body: 'Reads the text layer of PDFs. Text recognition for scans and photos is available when OCR is installed on the server.' },
-  { stage: 'Extract', status: 'Built', body: 'Rule-based extraction of names, contact details, dates, degrees, institutions, experience, skills and profile links.' },
-  { stage: 'Validate', status: 'Built', body: 'Cross-checks every detail between documents and flags ambiguous date formats.' },
-  { stage: 'Match', status: 'Built', body: 'Maps free-text form labels to profile fields using a table of common phrasings and text similarity.' },
-  { stage: 'Model-assisted extraction', status: 'Planned', body: 'A language model for documents with unusual layouts, behind the same extraction interface.' },
-  { stage: 'Semantic retrieval', status: 'Planned', body: 'Embeddings stored in a vector database, so long answers can be drawn from your full documents.' },
+  { stage: 'Extract', status: 'Built', body: 'Pattern rules and a language model (on Groq) read names, contact details, dates, degrees, institutions, experience, skills and profile links. Every AI answer must be found in the document, or it is discarded.' },
+  { stage: 'Validate', status: 'Built', body: 'Cross-checks every detail between documents, scores confidence, and flags conflicts and ambiguous date formats.' },
+  { stage: 'Index', status: 'Built', body: 'Splits each document into passages and stores their embeddings in Turso’s native vector search.' },
+  { stage: 'Match', status: 'Built', body: 'Maps form labels to your details by wording and by meaning (embeddings), then retrieves supporting passages and lets the language model choose each answer (RAG).' },
+  { stage: 'Review', status: 'Built', body: 'Nothing is submitted for you. You review every answer, see where it came from, and approve.' },
 ]
 
 export function AboutPage() {
@@ -70,7 +70,7 @@ export function AboutPage() {
               What’s built, and what’s next
             </h2>
             <p className="mt-4 text-[17px] leading-relaxed text-muted">
-              FormPilot runs on a React frontend and a Python FastAPI service with PostgreSQL. Here is the document pipeline
+              FormPilot runs on a React frontend, a Python FastAPI service and a Turso database. Here is the document pipeline
               as it stands today.
             </p>
           </div>

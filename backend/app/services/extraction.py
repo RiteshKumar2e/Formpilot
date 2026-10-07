@@ -1,8 +1,8 @@
-"""Document text extraction and rule-based field extraction.
+"""Document reading and structured field extraction.
 
-Pipeline: read text (PDF text layer, or OCR when available) -> extract structured fields with
-pattern rules -> decide a status. The LLM-based extractor described in the architecture plugs in
-behind `extract_fields`; the rules here are the deterministic baseline that runs without any model.
+Pipeline: read text (PDF text layer, or OCR when available) -> extract fields with pattern rules ->
+extract fields with Claude (when configured) -> merge the two, checking every model value against the
+document text -> decide a status. The rules are the deterministic baseline that runs without any model.
 """
 
 from __future__ import annotations
@@ -343,10 +343,74 @@ def extract_fields(text: str) -> list[Extracted]:
     return found
 
 
+# --- Combining rules with the LLM -----------------------------------------------------------
+
+# Fields where a pattern match is near-certain; the model can't override these.
+_RULE_AUTHORITATIVE = {"email", "linkedin", "github"}
+
+
+def _norm(value: str) -> str:
+    return re.sub(r"[^a-z0-9@+]+", " ", value.lower()).strip()
+
+
+def grounded(value: str, text: str) -> bool:
+    """True when the value's words appear in the document, so the model didn't invent it."""
+    words = [w for w in _norm(value).split() if len(w) > 1]
+    if not words:
+        return False
+    haystack = _norm(text)
+    found = sum(1 for w in words if w in haystack)
+    return found / len(words) >= 0.8
+
+
+def merge_extractions(rules: list[Extracted], llm: list[Extracted], text: str) -> list[Extracted]:
+    """Combines rule and model results field by field.
+
+    Agreement raises confidence. On disagreement the model's reading wins (it understands context the
+    rules don't), but with lower confidence so the user is asked to check. Model values that can't be
+    found in the document are discarded.
+    """
+    by_key = {f.key: f for f in rules}
+    merged: dict[str, Extracted] = dict(by_key)
+    for f in llm:
+        if f.key in _RULE_AUTHORITATIVE and f.key in by_key:
+            continue
+        # Dates are reformatted by both extractors, so compare them as parsed dates rather than text.
+        if f.key == "date_of_birth":
+            parsed = parse_date(f.value)
+            if not parsed:
+                continue
+            value_ok = True
+            f = Extracted(f.key, parsed[0], min(f.confidence, parsed[1]))
+        else:
+            value_ok = grounded(f.value, text)
+        if not value_ok:
+            continue
+        rule = by_key.get(f.key)
+        if rule is None:
+            merged[f.key] = f
+        elif _norm(rule.value) == _norm(f.value):
+            merged[f.key] = Extracted(f.key, rule.value, round(min(0.99, max(rule.confidence, f.confidence) + 0.05), 2))
+        else:
+            merged[f.key] = Extracted(f.key, f.value, round(min(f.confidence, 0.69), 2))
+    order = list(FIELD_LABELS)
+    return sorted(merged.values(), key=lambda f: order.index(f.key))
+
+
+def llm_fields(text: str) -> list[Extracted] | None:
+    from .llm import extract_with_llm
+
+    result = extract_with_llm(text)
+    if result is None:
+        return None
+    return [Extracted(f.key, _clean(f.value), round(max(0.0, min(1.0, f.confidence)), 2)) for f in result if _clean(f.value)]
+
+
 # --- Entry point --------------------------------------------------------------------------
 
 
-def process_document(data: bytes, content_type: str) -> ExtractionResult:
+def read_text(data: bytes, content_type: str) -> tuple[str | None, int | None, ExtractionResult | None]:
+    """Reads the document's text. Returns (text, pages, None), or a final result when it can't be read."""
     try:
         if content_type == "application/pdf":
             text, pages = read_pdf(data)
@@ -354,23 +418,25 @@ def process_document(data: bytes, content_type: str) -> ExtractionResult:
             pages = 1
             ocr_text = read_image(data)
             if ocr_text is None:
-                return ExtractionResult(
+                return None, pages, ExtractionResult(
                     status="needs_review",
                     message="Text recognition for images isn't enabled on this server yet, so no details were extracted. Upload a PDF with selectable text instead.",
                     page_count=pages,
                 )
             text = ocr_text
     except UnreadableDocument as exc:
-        return ExtractionResult(status="failed", message=str(exc), page_count=None)
+        return None, None, ExtractionResult(status="failed", message=str(exc), page_count=None)
 
     if not text.strip():
-        return ExtractionResult(
+        return None, pages, ExtractionResult(
             status="failed",
             message="We couldn't find any readable text. Try uploading a clearer file.",
             page_count=pages,
         )
+    return text, pages, None
 
-    fields = extract_fields(text)
+
+def decide(fields: list[Extracted], pages: int | None) -> ExtractionResult:
     if not fields:
         return ExtractionResult(
             status="needs_review",
@@ -391,3 +457,15 @@ def process_document(data: bytes, content_type: str) -> ExtractionResult:
             fields=fields,
         )
     return ExtractionResult(status="processed", message=None, page_count=pages, fields=fields)
+
+
+def process_document(data: bytes, content_type: str, use_llm: bool = True) -> tuple[ExtractionResult, str | None]:
+    """Reads and extracts a document. Returns the result and the document text (for indexing)."""
+    text, pages, early = read_text(data, content_type)
+    if early is not None:
+        return early, None
+    assert text is not None
+    fields = extract_fields(text)
+    if use_llm and (model_fields := llm_fields(text)) is not None:
+        fields = merge_extractions(fields, model_fields, text)
+    return decide(fields, pages), text

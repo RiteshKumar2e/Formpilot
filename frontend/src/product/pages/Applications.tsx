@@ -137,7 +137,7 @@ export function ApplicationsPage() {
           })}
         </ul>
       )}
-      <p className="text-[13px] text-subtle">Applications are saved in this browser until the applications API is available.</p>
+      <p className="text-[13px] text-subtle">Applications are saved to your account and encrypted at rest.</p>
     </div>
   )
 }

@@ -167,7 +167,7 @@ export function FieldMappingPage() {
       </Card>
 
       <p className="text-[13px] leading-relaxed text-subtle">
-        Each question is scored against every field in your profile on the FormPilot API, using known phrasings and text similarity. The production design adds embeddings and vector search behind the same interface.
+        Each question is matched to your profile by wording and by meaning (embeddings). FormPilot then retrieves the most relevant passages from your documents and, when a language model is configured, lets it choose the answer. Every answer must trace back to your profile or a passage, or it is left for you.
       </p>
     </div>
   )

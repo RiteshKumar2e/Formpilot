@@ -1,0 +1,83 @@
+{
+  "description": "Form field labels collected from job, internship, scholarship, admission and government forms, with the profile concept each one asks for (null = not a profile detail). None of these strings appear verbatim in the matcher's phrase list.",
+  "forms": {
+    "Software engineering job": [
+      ["Applicant full name", "full_name"],
+      ["Your e-mail address", "email"],
+      ["Phone (with country code)", "phone"],
+      ["Highest degree obtained", "highest_qualification"],
+      ["University / College attended", "institution"],
+      ["Current job title and company", "experience"],
+      ["Programming languages you know", "skills"],
+      ["LinkedIn profile URL", "linkedin"],
+      ["GitHub username or URL", "github"],
+      ["Expected salary", null],
+      ["Notice period", null],
+      ["Why do you want to join us?", null]
+    ],
+    "Research internship": [
+      ["First and last name", "full_name"],
+      ["Preferred email for correspondence", "email"],
+      ["Mobile contact", "phone"],
+      ["Date you were born", "date_of_birth"],
+      ["Degree programme currently enrolled in", "highest_qualification"],
+      ["Name of your university", "institution"],
+      ["Expected year of graduation", "graduation_year"],
+      ["Relevant research experience", "experience"],
+      ["Technical proficiencies", "skills"],
+      ["Statement of purpose", null],
+      ["Name of faculty referee", null]
+    ],
+    "Scholarship": [
+      ["Name of the student", "full_name"],
+      ["Student email ID", "email"],
+      ["Contact no.", "phone"],
+      ["D.O.B.", "date_of_birth"],
+      ["Course of study", "highest_qualification"],
+      ["Institute name", "institution"],
+      ["Year of completion", "graduation_year"],
+      ["Permanent residential address", "address"],
+      ["Parent / guardian phone number", "emergency_contact"],
+      ["Annual family income", null],
+      ["Bank account number", null]
+    ],
+    "University admission": [
+      ["Candidate's name (as per certificates)", "full_name"],
+      ["Email of applicant", "email"],
+      ["Telephone number", "phone"],
+      ["Birth date (DD/MM/YYYY)", "date_of_birth"],
+      ["Qualifying examination passed", "highest_qualification"],
+      ["School/College last attended", "institution"],
+      ["Year in which you passed", "graduation_year"],
+      ["Correspondence address", "address"],
+      ["Person to contact in an emergency", "emergency_contact"],
+      ["Category (General/OBC/SC/ST)", null],
+      ["Blood group", null]
+    ],
+    "Government job portal": [
+      ["Name in full (block letters)", "full_name"],
+      ["Registered e-mail", "email"],
+      ["Registered mobile number", "phone"],
+      ["Date of birth as recorded in matriculation certificate", "date_of_birth"],
+      ["Educational qualification (highest)", "highest_qualification"],
+      ["Board / University", "institution"],
+      ["Year of passing (highest qualification)", "graduation_year"],
+      ["Work experience (in years and organisation)", "experience"],
+      ["Address for communication", "address"],
+      ["Nationality", null],
+      ["Aadhaar number", null]
+    ],
+    "Hackathon registration": [
+      ["Participant name", "full_name"],
+      ["Where can we email you?", "email"],
+      ["WhatsApp no.", "phone"],
+      ["What are you studying?", "highest_qualification"],
+      ["Where did you study?", "institution"],
+      ["Tech stack", "skills"],
+      ["Link to your GitHub", "github"],
+      ["Link to your LinkedIn", "linkedin"],
+      ["T-shirt size", null],
+      ["Team name", null]
+    ]
+  }
+}

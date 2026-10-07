@@ -1,0 +1,28 @@
+# Runs FormPilot locally in containers: http://localhost:8080
+#   docker compose up --build
+# Secrets come from backend/.env (TURSO_*, GROQ_API_KEY, GOOGLE_*). Without TURSO_DATABASE_URL the
+# backend keeps a libSQL file in the `formpilot-data` volume.
+services:
+  backend:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: sqlite+libsql:////data/formpilot.db
+      STORAGE_DIR: /data/storage
+      APP_URL: http://localhost:8080
+      CORS_ORIGINS: http://localhost:8080
+      TRUST_PROXY_HEADERS: "true"
+    volumes:
+      - formpilot-data:/data
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  formpilot-data:

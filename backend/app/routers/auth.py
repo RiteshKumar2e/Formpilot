@@ -1,15 +1,28 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+import base64
+import hashlib
+import hmac
+import logging
+import secrets
+from datetime import datetime, timedelta, timezone
+from urllib.parse import urlencode
+
+import httpx
+import jwt
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..database import get_db
 from ..deps import get_current_user, get_optional_user
-from ..models import User
+from ..models import OAuthAccount, User
 from ..ratelimit import signin_limit, signup_limit
 from ..schemas import SessionOut, SignInIn, SignUpIn, UserOut
 from ..services import storage
 from ..security import SESSION_COOKIE, create_session_token, hash_password, verify_password
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -81,3 +94,118 @@ def session(user: User | None = Depends(get_optional_user)) -> SessionOut:
 @router.get("/me", response_model=UserOut)
 def me(user: User = Depends(get_current_user)) -> User:
     return user
+
+
+# --- Sign in with Google (OAuth 2.0 authorization code flow + PKCE, OpenID Connect) ----------
+
+GOOGLE_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
+OAUTH_COOKIE = "fp_oauth"
+_OAUTH_COOKIE_PATH = "/api/auth/oauth"
+
+
+def _google_redirect_uri() -> str:
+    return f"{get_settings().api_base_url}/api/auth/oauth/google/callback"
+
+
+@router.get("/providers")
+def providers() -> dict[str, bool]:
+    """Which sign-in providers are configured, so the web app only shows working buttons."""
+    return {"google": get_settings().google_oauth_enabled}
+
+
+@router.get("/oauth/google/start")
+def google_start() -> RedirectResponse:
+    settings = get_settings()
+    if not settings.google_oauth_enabled:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Google sign-in isn't configured.")
+    state = secrets.token_urlsafe(24)
+    verifier = secrets.token_urlsafe(48)
+    challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
+    params = {
+        "client_id": settings.google_client_id,
+        "redirect_uri": _google_redirect_uri(),
+        "response_type": "code",
+        "scope": "openid email profile",
+        "state": state,
+        "code_challenge": challenge,
+        "code_challenge_method": "S256",
+        "prompt": "select_account",
+    }
+    response = RedirectResponse(f"{GOOGLE_AUTHORIZE_URL}?{urlencode(params)}", status_code=status.HTTP_303_SEE_OTHER)
+    expires = datetime.now(timezone.utc) + timedelta(minutes=10)
+    cookie = jwt.encode({"state": state, "verifier": verifier, "exp": expires}, settings.signing_key, algorithm="HS256")
+    response.set_cookie(
+        OAUTH_COOKIE, cookie, max_age=600, httponly=True, secure=settings.cookie_secure, samesite="lax", path=_OAUTH_COOKIE_PATH
+    )
+    return response
+
+
+def _oauth_user(db: Session, subject: str, email: str, name: str) -> User:
+    link = db.scalar(select(OAuthAccount).where(OAuthAccount.provider == "google", OAuthAccount.subject == subject))
+    if link:
+        user = db.get(User, link.user_id)
+        if user:
+            return user
+    # Google verified this address, so it's safe to link to an existing account with the same email.
+    user = db.scalar(select(User).where(User.email == email))
+    if user is None:
+        user = User(full_name=name[:200] or email.split("@")[0], email=email, password_hash="")
+        db.add(user)
+        db.flush()
+    db.add(OAuthAccount(user_id=user.id, provider="google", subject=subject))
+    db.commit()
+    return user
+
+
+@router.get("/oauth/google/callback")
+def google_callback(
+    code: str | None = None,
+    state: str | None = None,
+    oauth_cookie: str | None = Cookie(default=None, alias=OAUTH_COOKIE),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    settings = get_settings()
+    failure = RedirectResponse(f"{settings.app_url.rstrip('/')}/login?error=oauth", status_code=status.HTTP_303_SEE_OTHER)
+    failure.delete_cookie(OAUTH_COOKIE, path=_OAUTH_COOKIE_PATH)
+    if not settings.google_oauth_enabled or not code or not state or not oauth_cookie:
+        return failure
+    try:
+        saved = jwt.decode(oauth_cookie, settings.signing_key, algorithms=["HS256"])
+    except jwt.PyJWTError:
+        return failure
+    if not hmac.compare_digest(str(saved.get("state", "")), state):
+        return failure
+
+    try:
+        token = httpx.post(
+            GOOGLE_TOKEN_URL,
+            data={
+                "code": code,
+                "client_id": settings.google_client_id,
+                "client_secret": settings.google_client_secret,
+                "redirect_uri": _google_redirect_uri(),
+                "grant_type": "authorization_code",
+                "code_verifier": saved["verifier"],
+            },
+            timeout=10,
+        )
+        token.raise_for_status()
+        info = httpx.get(
+            GOOGLE_USERINFO_URL, headers={"Authorization": f"Bearer {token.json()['access_token']}"}, timeout=10
+        )
+        info.raise_for_status()
+        profile = info.json()
+    except (httpx.HTTPError, KeyError, ValueError) as exc:
+        log.warning("Google sign-in failed: %s", exc)
+        return failure
+
+    email = str(profile.get("email", "")).lower()
+    if not profile.get("sub") or not email or profile.get("email_verified") is not True:
+        return failure
+    user = _oauth_user(db, str(profile["sub"]), email, str(profile.get("name", "")))
+    response = RedirectResponse(f"{settings.app_url.rstrip('/')}/dashboard", status_code=status.HTTP_303_SEE_OTHER)
+    response.delete_cookie(OAUTH_COOKIE, path=_OAUTH_COOKIE_PATH)
+    _set_session(response, user)
+    return response

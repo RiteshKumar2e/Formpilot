@@ -60,6 +60,63 @@ export interface FieldMatch {
   confidence: number
   source_filename: string | null
   needs_review: boolean
+  /** How the value was found: LLM + retrieved passages, embeddings, word overlap, or not at all. */
+  method: 'llm_rag' | 'semantic' | 'lexical' | 'none'
+  reasoning: string | null
+  /** The passage from the user's documents that best supports the value. */
+  evidence: string | null
+}
+
+export interface MappingResponse {
+  matches: FieldMatch[]
+  workflow_id: string | null
+}
+
+export interface WorkflowStep {
+  name: string
+  status: 'running' | 'completed' | 'failed' | 'skipped'
+  detail: string | null
+  duration_ms: number
+}
+
+export interface WorkflowRun {
+  id: string
+  workflow: 'document_ingestion' | 'form_mapping' | string
+  subject_id: string | null
+  status: string
+  steps: WorkflowStep[]
+  started_at: string
+  finished_at: string | null
+}
+
+export type WebhookEvent = 'document.processed' | 'application.created' | 'application.approved' | 'application.deleted'
+
+export interface WebhookDelivery {
+  event: string
+  ok: boolean
+  status_code: number | null
+  error: string | null
+  created_at: string
+}
+
+export interface Webhook {
+  id: string
+  url: string
+  events: WebhookEvent[]
+  active: boolean
+  created_at: string
+  /** Only returned once, when the webhook is created. */
+  secret: string | null
+  recent_deliveries: WebhookDelivery[]
+}
+
+export interface Capabilities {
+  llm: { enabled: boolean; provider: string; model: string }
+  embeddings: { provider: string; semantic: boolean }
+  vector_store: string
+  database: string
+  ocr: boolean
+  oauth: { google: boolean }
 }
 
 export interface SignUpPayload {
