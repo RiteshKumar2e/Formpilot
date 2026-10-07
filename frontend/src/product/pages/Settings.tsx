@@ -140,29 +140,29 @@ export function SettingsPage() {
         <Row label="Stored files" hint="Uploaded files are encrypted at rest.">
           <Badge tone="success">Encrypted</Badge>
         </Row>
-          <div className="py-3.5">
-            <Row label="Delete account" hint="Permanently removes your profile, documents and extracted data.">
-              {confirmDelete ? (
-                <div className="flex gap-2">
-                  <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(false)}>
-                    Cancel
-                  </Button>
-                  <Button variant="danger" size="sm" onClick={() => void deleteAccount()}>
-                    Delete everything
-                  </Button>
-                </div>
-              ) : (
-                <Button variant="secondary" size="sm" className="text-danger" onClick={() => setConfirmDelete(true)}>
-                  Delete account
+        <div className="py-3.5">
+          <Row label="Delete account" hint="Permanently removes your profile, documents and extracted data.">
+            {confirmDelete ? (
+              <div className="flex gap-2">
+                <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(false)}>
+                  Cancel
                 </Button>
-              )}
-            </Row>
-            {deleteError && (
-              <p role="alert" className="mt-2 text-[14px] text-danger">
-                {deleteError}
-              </p>
+                <Button variant="danger" size="sm" onClick={() => void deleteAccount()}>
+                  Delete everything
+                </Button>
+              </div>
+            ) : (
+              <Button variant="secondary" size="sm" className="text-danger" onClick={() => setConfirmDelete(true)}>
+                Delete account
+              </Button>
             )}
-          </div>
+          </Row>
+          {deleteError && (
+            <p role="alert" className="mt-2 text-[14px] text-danger">
+              {deleteError}
+            </p>
+          )}
+        </div>
       </Section>
 
       <Section title="Connected Services" description="Import documents from where they already live.">

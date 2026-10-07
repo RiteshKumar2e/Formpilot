@@ -37,10 +37,12 @@ export const STATUS_LABEL: Record<ApplicationStatus, string> = {
   prepared: 'Ready for Submission',
 }
 
+const CORE_KEYS = ['full_name', 'email', 'phone', 'date_of_birth', 'highest_qualification', 'institution', 'experience', 'skills']
+
+/** Share of the core profile details that have a value. */
 export function profileCompleteness(profile: ProfileField[]): number {
-  if (!profile.length) return 0
-  const filled = profile.filter((f) => f.value).length
-  return Math.round((filled / profile.length) * 100)
+  const filled = CORE_KEYS.filter((k) => profile.some((f) => f.key === k && f.value)).length
+  return Math.round((filled / CORE_KEYS.length) * 100)
 }
 
 export function needsReviewCount(data: WorkspaceData): number {

@@ -127,6 +127,18 @@ const FORM_SECTION: Record<ProfileSection, string> = {
   skills: 'Skills',
 }
 
+/** Details every profile should have; mirrors CORE_FIELDS in backend/app/services/fields.py. */
+export const CORE_FIELDS: { key: string; label: string }[] = [
+  { key: 'full_name', label: 'Full name' },
+  { key: 'email', label: 'Email' },
+  { key: 'phone', label: 'Phone' },
+  { key: 'date_of_birth', label: 'Date of birth' },
+  { key: 'highest_qualification', label: 'Highest qualification' },
+  { key: 'institution', label: 'Institution' },
+  { key: 'experience', label: 'Professional experience' },
+  { key: 'skills', label: 'Skills' },
+]
+
 function fromApiProfile(p: ApiProfile): ProfileField[] {
   const fields: ProfileField[] = p.fields.map((f) => ({
     key: f.key,
@@ -148,6 +160,12 @@ function fromApiProfile(p: ApiProfile): ProfileField[] {
       verified: false,
       conflict: c.values.map((v) => ({ value: v.value, source: v.source_filename })),
     })
+  }
+  // Core details not found in any document appear as empty rows the user can fill in.
+  for (const core of CORE_FIELDS) {
+    if (!fields.some((f) => f.key === core.key)) {
+      fields.push({ key: core.key, label: core.label, section: SECTION_FOR[core.key], value: '', source: null, confidence: 0, verified: false })
+    }
   }
   return fields
 }
