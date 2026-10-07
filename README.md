@@ -106,7 +106,6 @@ Without a Groq key, steps 2 and 5 run without the LLM: rules, embeddings and ret
 | Documents | pypdf for text extraction, optional Tesseract OCR |
 | Automation | Workflow engine with recorded steps, signed webhooks, autofill API |
 | Auth & security | scrypt passwords, JWT session in an httpOnly cookie, Sign in with Google (OAuth 2.0 + PKCE), Fernet encryption of files and personal data |
-| Deployment | Docker images and `docker-compose.yml` |
 | Testing | pytest with the FastAPI TestClient, plus an accuracy eval (`backend/eval/`) |
 
 ## Getting started
@@ -167,14 +166,6 @@ Put both in `backend/.env`. Tables are created on first start. Without them, the
 ### Groq LLM
 
 Create a key at [console.groq.com/keys](https://console.groq.com/keys) and set `GROQ_API_KEY` in `backend/.env`. Settings → AI engine in the app shows what is active.
-
-### Docker
-
-```bash
-docker compose up --build              # http://localhost:8080
-```
-
-The frontend container serves the build with nginx and proxies `/api` to the backend container. Secrets are read from `backend/.env`.
 
 ## Configuration
 
@@ -314,7 +305,6 @@ Formpilot/
 │   │       └── storage.py       # Encrypted file storage
 │   ├── eval/                    # Labelled forms and documents, accuracy script
 │   ├── tests/                   # pytest suite
-│   ├── Dockerfile
 │   └── requirements.txt
 └── frontend/
     ├── public/                  # Favicon, fonts, screenshots, robots.txt, sitemap.xml
@@ -328,7 +318,6 @@ Formpilot/
         │   └── pages/           # Dashboard, Profile, Documents, Applications, ...
         ├── lib/                 # API client, analytics, validation helpers
         └── index.css            # Design tokens: colors, radii, shadows
-docker-compose.yml               # Backend + frontend (nginx) containers
 ```
 
 ## Testing
@@ -376,7 +365,7 @@ Found a security issue? Please email the address under [Contact](#contact) rathe
 ## Deployment
 
 - **Frontend:** any static host. [`vercel.json`](frontend/vercel.json), and [`_redirects`](frontend/public/_redirects) with [`_headers`](frontend/public/_headers) for Netlify, provide SPA routing, HSTS and asset caching.
-- **Backend:** any host that runs Python or Docker (Render, Railway, Fly.io, or a VM). Use Turso (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`), set the production variables above, and set `TRUST_PROXY_HEADERS=true` behind a proxy. `docker compose up --build` runs both services.
+- **Backend:** any host that runs Python (Render, Railway, Fly.io, or a VM). Use Turso (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`), set the production variables above, and set `TRUST_PROXY_HEADERS=true` behind a proxy.
 - **Domain:** replace `https://formpilot.app` in `index.html`, `robots.txt`, `sitemap.xml` and `usePageMeta.ts` with your own.
 - **Before launch:** the Privacy Policy and Terms of Service in the app are drafts. Their highlighted placeholders need the operator's legal name, address, hosting region, retention periods and governing law, followed by a legal review.
 
