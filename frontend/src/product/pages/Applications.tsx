@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertTriangle, ClipboardList, Plus } from 'lucide-react'
+import { AlertTriangle, ClipboardList, Plus, Trash2 } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import { cn } from '../../lib/utils'
@@ -20,7 +20,7 @@ const FILTERS: { id: ApplicationStatus | 'all'; label: string }[] = [
 
 export function ApplicationsPage() {
   usePageMeta({ title: 'Applications', path: '/applications' })
-  const { data } = useWorkspace()
+  const { data, deleteApplication } = useWorkspace()
   const [filter, setFilter] = useState<ApplicationStatus | 'all'>('all')
   if (!data) return null
   const apps = [...data.applications].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
@@ -119,6 +119,17 @@ export function ApplicationsPage() {
                         Continue
                       </Button>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm(`Delete "${app.title}"? This can't be undone.`)) deleteApplication(app.id)
+                      }}
+                      className="inline-flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-line text-subtle hover:border-danger hover:bg-danger-soft hover:text-danger"
+                      aria-label={`Delete ${app.title}`}
+                      title="Delete application"
+                    >
+                      <Trash2 className="size-4" aria-hidden />
+                    </button>
                   </div>
                 </Card>
               </li>
