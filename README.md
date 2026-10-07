@@ -38,31 +38,29 @@ The Vite dev server proxies `/api` to the backend.
 ## Tests
 
 ```bash
-cd backend && .venv/Scripts/python -m pytest -q    # 24 tests
+cd backend && .venv/Scripts/python -m pytest -q    # 25 tests
 cd frontend && npm run build                       # type-checks and builds
 ```
 
 ## The product
 
-**Demo Mode** (for judges): click **Start Product Demo** on the home, login or signup page. It loads a fictional applicant (Ritesh Kumar) with 8 documents and 6 applications, stored only in the browser. The yellow **Demo Mode** badge opens a step-by-step demo guide. "Reset demo data" restores the starting state.
-
-**Account mode**: sign up or sign in. Documents, profile, conflicts and field mapping run on the FastAPI backend. Applications are saved in the browser until an applications API exists (the UI says so).
+Sign up, upload your documents, and FormPilot builds your profile on the FastAPI backend. Documents, profile, conflicts and field mapping are stored in your account. Applications are saved in the browser until an applications API exists (the UI says so).
 
 | Route | What it shows |
 | --- | --- |
 | `/dashboard` | Profile completion, documents, applications, quick actions, activity |
-| `/profile` | Every profile value with its source document, verification and inline editing |
+| `/profile` | Every profile value with its source document and verification; add missing details or fix values |
 | `/documents` | Category filters, document detail drawer, upload with processing stages and errors |
 | `/applications`, `/applications/new` | Status filters; create from a type, template or pasted field list |
-| `/applications/:id` | Workspace: structure, mapped form, assistant with source, confidence, reasoning and retrieval candidates |
+| `/applications/:id` | Workspace: structure, mapped form, assistant with source, confidence and reasoning |
 | `/mapping` | Field → match → source → confidence for every field |
 | `/validation` | Conflicts and missing information, each with a fix |
 | `/applications/:id/review` | Final review, explicit approval, "Ready for Submission" success state |
 | `/activity`, `/settings` | Timeline of everything that happened; account, security, notifications, privacy |
 
-Code lives in `frontend/src/product/`: `types.ts` (domain model), `workspace.tsx` (one interface over the demo and API data sources), `matcher.ts` (in-browser retrieval and mapping used in Demo Mode), `demoData.ts`, `selectors.ts`, and `pages/`.
+Code lives in `frontend/src/product/`: `types.ts` (domain model), `workspace.tsx` (API calls and state), `templates.ts` (typical fields per application type), `selectors.ts`, and `pages/`.
 
-**Honest about what's simulated:** Demo Mode never reads uploaded files; its processing stages are simulated and labelled. Field matching in Demo Mode is real code (phrasing tables plus text similarity), not hard-coded answers. Nothing is ever submitted: approval marks an application "Ready for Submission".
+Nothing is ever submitted: approval marks an application "Ready for Submission".
 
 ## What's built on the backend
 
@@ -90,7 +88,7 @@ Code lives in `frontend/src/product/`: `types.ts` (domain model), `workspace.tsx
 ## Before launch
 
 - The Privacy Policy and Terms of Service are **drafts**. Highlighted placeholders need the operator's legal name, address, hosting region, retention periods and governing law, followed by legal review.
-- The screenshots in `public/screens/` are real captures of the product in Demo Mode. Retake them if the UI changes.
+- The screenshots in `public/screens/` are real captures of the product with sample documents. Retake them if the UI changes.
 
 ## Design
 
