@@ -12,13 +12,17 @@ FIELD_LABELS: dict[str, str] = {
     "skills": "Skills",
     "linkedin": "LinkedIn",
     "github": "GitHub",
+    "address": "Address",
+    "projects": "Projects",
+    "achievements": "Achievements",
+    "certifications": "Certifications",
 }
 
 # Fields used to compute profile completeness.
 CORE_FIELDS = ("full_name", "email", "phone", "date_of_birth", "highest_qualification", "institution", "experience", "skills")
 
-# Fields where several values are merged instead of treated as a conflict.
-MULTI_VALUE_FIELDS = {"skills"}
+# Fields where several values are merged instead of treated as a conflict, and the separator between items.
+MULTI_VALUE_FIELDS = {"skills": ", ", "projects": "; ", "achievements": "; ", "certifications": "; "}
 
 # Phrasings that application forms commonly use for each field.
 CONCEPTS: dict[str, list[str]] = {
@@ -47,8 +51,10 @@ CONCEPTS: dict[str, list[str]] = {
         "most recent position", "current position", "job title", "previous employment", "work history",
     ],
     "skills": ["skills", "technical skills", "key skills", "core competencies", "areas of expertise", "technologies"],
-    # Details FormPilot doesn't extract yet. Recognizing them stops look-alike labels
-    # ("Current Address" vs "Email Address") from being matched to the wrong field.
+    "projects": ["projects", "key projects", "academic projects", "personal projects", "project experience", "notable projects"],
+    "achievements": ["achievements", "awards", "honours and awards", "accomplishments", "awards and achievements", "recognition"],
+    "certifications": ["certifications", "certificates", "licenses and certifications", "professional certifications", "courses completed"],
+    # "Current Address" vs "Email Address": listing addresses stops look-alike labels matching the wrong field.
     "address": ["address", "current address", "residential address", "permanent address", "mailing address", "home address", "city"],
     "emergency_contact": ["emergency contact", "emergency contact number", "guardian contact", "next of kin"],
     "linkedin": ["linkedin", "linkedin profile", "linkedin url"],

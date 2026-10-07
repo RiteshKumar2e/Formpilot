@@ -70,12 +70,20 @@ class DocumentOut(BaseModel):
     created_at: datetime
 
 
+Verification = Literal["confirmed_by_you", "multiple_documents", "high_confidence", "unverified"]
+
+
 class ProfileFieldOut(BaseModel):
     key: str
     label: str
     value: str
     confidence: float
     source_filename: str
+    sources: list[str] = []
+    # Why the value can be trusted: chosen by the user, found in several documents, or read with high confidence.
+    verification: Verification = "unverified"
+    verified: bool = False
+    updated_at: datetime | None = None
 
 
 class ConflictValueOut(BaseModel):

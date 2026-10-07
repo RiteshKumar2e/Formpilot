@@ -318,6 +318,55 @@ def _extract_experience(lines: list[str]) -> Extracted | None:
     return None
 
 
+LIST_SECTIONS = {
+    "projects": r"(?:academic\s+|personal\s+|key\s+)?projects",
+    "achievements": r"(?:achievements|awards(?:\s+(?:and|&)\s+achievements)?|honou?rs(?:\s+(?:and|&)\s+awards)?|accomplishments)",
+    "certifications": r"(?:certifications|certificates|licen[cs]es(?:\s+(?:and|&)\s+certifications)?)",
+}
+_ANY_HEADING = re.compile(
+    r"^(?:education|(?:work\s+|professional\s+|relevant\s+)?experience|(?:technical\s+|key\s+)?skills|summary|objective|"
+    r"profile|contact|languages|interests|hobbies|references|internships?|"
+    + "|".join(LIST_SECTIONS.values())
+    + r")\s*(?::.*)?$",
+    re.I,
+)
+_BULLET = re.compile(r"^[•●▪\-*–·]+\s*")
+
+
+def _extract_list_section(key: str, lines: list[str]) -> Extracted | None:
+    """Items under a heading such as "Projects", or after "Certifications: a, b"."""
+    heading = re.compile(rf"^{LIST_SECTIONS[key]}\s*[:\-]?\s*(.*)$", re.I)
+    for i, line in enumerate(lines):
+        m = heading.match(line)
+        if not m:
+            continue
+        if m.group(1):
+            items = [_clean(x) for x in re.split(r"[;,|]", m.group(1))]
+        else:
+            items = []
+            for follow in lines[i + 1 : i + 12]:
+                if _ANY_HEADING.match(follow):
+                    break
+                item = _clean(_BULLET.sub("", follow))
+                # Long lines are descriptions of the item above, not new items.
+                if item and len(item) <= 120 and (not items or _BULLET.match(follow) or len(item) <= 70):
+                    items.append(DATE_RANGE_TAIL.sub("", item).strip() or item)
+                if len(items) >= 6:
+                    break
+        items = [x for x in dict.fromkeys(items) if 3 <= len(x) <= 120]
+        if items:
+            return Extracted(key, "; ".join(items), 0.75)
+    return None
+
+
+def _extract_address(lines: list[str]) -> Extracted | None:
+    for line in lines:
+        m = re.match(r"^(?:permanent\s+|current\s+|residential\s+|mailing\s+|home\s+)?address\s*[:\-]\s*(.{8,160})$", line, re.I)
+        if m:
+            return Extracted("address", _clean(m.group(1)), 0.85)
+    return None
+
+
 def extract_fields(text: str) -> list[Extracted]:
     lines = [_clean(l) for l in text.splitlines()]
     lines = [l for l in lines if l]
@@ -340,6 +389,11 @@ def extract_fields(text: str) -> list[Extracted]:
         found.append(Extracted("linkedin", m.group(0), 0.95))
     if m := GITHUB_RE.search(text):
         found.append(Extracted("github", m.group(0), 0.95))
+    if address := _extract_address(lines):
+        found.append(address)
+    for key in LIST_SECTIONS:
+        if item := _extract_list_section(key, lines):
+            found.append(item)
     return found
 
 

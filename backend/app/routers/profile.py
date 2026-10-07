@@ -6,7 +6,7 @@ from ..database import get_db
 from ..deps import get_current_user
 from ..models import ProfileChoice, User
 from ..schemas import MappingIn, MappingOut, ProfileOut, ResolveConflictIn
-from ..services.fields import FIELD_LABELS, MULTI_VALUE_FIELDS
+from ..services.fields import FIELD_LABELS
 from ..services.rag import map_fields as rag_map_fields
 from ..services.profile import build_profile
 
@@ -20,8 +20,9 @@ def get_profile(user: User = Depends(get_current_user), db: Session = Depends(ge
 
 @router.post("/profile/conflicts/resolve", response_model=ProfileOut)
 def resolve_conflict(payload: ResolveConflictIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> ProfileOut:
-    if payload.key not in FIELD_LABELS or payload.key in MULTI_VALUE_FIELDS:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "This field can't be resolved.")
+    """Sets a profile value: picks one side of a conflict, fills in a missing detail, or edits a list."""
+    if payload.key not in FIELD_LABELS:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "This isn't a profile field.")
     choice = db.scalar(select(ProfileChoice).where(ProfileChoice.user_id == user.id, ProfileChoice.key == payload.key))
     if choice:
         choice.value = payload.value

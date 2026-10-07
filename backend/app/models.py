@@ -33,6 +33,8 @@ class User(Base):
     applications: Mapped[list["Application"]] = relationship(cascade="all, delete-orphan")
     webhooks: Mapped[list["Webhook"]] = relationship(cascade="all, delete-orphan")
     workflow_runs: Mapped[list["WorkflowRun"]] = relationship(cascade="all, delete-orphan")
+    saved_answers: Mapped[list["SavedAnswer"]] = relationship(cascade="all, delete-orphan")
+    templates: Mapped[list["ApplicationTemplate"]] = relationship(cascade="all, delete-orphan")
 
 
 class OAuthAccount(Base):
@@ -106,6 +108,7 @@ class ProfileChoice(Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     key: Mapped[str] = mapped_column(String(64))
     value: Mapped[str] = mapped_column(EncryptedText)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=_now, onupdate=_now)
 
 
 class Application(Base):
@@ -118,6 +121,34 @@ class Application(Base):
     status: Mapped[str] = mapped_column(String(20))
     data: Mapped[Any] = mapped_column(EncryptedJSON)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+
+class SavedAnswer(Base):
+    """An answer to a common application question ("Why this company?"), reusable across forms."""
+
+    __tablename__ = "saved_answers"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    question: Mapped[str] = mapped_column(EncryptedText)
+    answer: Mapped[str] = mapped_column(EncryptedText)
+    use_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+
+class ApplicationTemplate(Base):
+    """A completed application saved for reuse: its fields, answers and documents (stored encrypted)."""
+
+    __tablename__ = "application_templates"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(EncryptedText)
+    application_type: Mapped[str] = mapped_column(String(20))
+    data: Mapped[Any] = mapped_column(EncryptedJSON)
+    use_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
 class WorkflowRun(Base):

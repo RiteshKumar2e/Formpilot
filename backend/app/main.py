@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from .config import get_settings
+from . import migrations
 from .database import Base, engine
 from .routers import applications, auth, contact, documents, integrations, profile, system
 
@@ -14,7 +15,7 @@ settings.validate_for_production()
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    # For production schema changes, introduce Alembic migrations.
+    migrations.upgrade(engine)  # adds columns introduced after a database was created
     Base.metadata.create_all(bind=engine)
     yield
 
