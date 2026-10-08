@@ -38,7 +38,7 @@ for (const { entry, file, format, name } of entries) {
   })
 }
 
-await cp(resolve(root, 'manifest.json'), resolve(out, 'manifest.json'))
+await cp(resolve(root, 'src/manifest.json'), resolve(out, 'manifest.json'))
 await cp(resolve(root, 'src/popup/popup.html'), resolve(out, 'popup.html'))
 await cp(resolve(root, 'icons'), resolve(out, 'icons'), { recursive: true })
 console.log(`FormPilot extension built: ${out}`)
