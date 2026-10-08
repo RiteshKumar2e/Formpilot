@@ -7,6 +7,8 @@ import { useAuth } from '../hooks/useAuth'
 import { usePageMeta } from '../hooks/usePageMeta'
 import { Alert, PasswordField, TextField } from '../components/ui/FormControls'
 import { Button } from '../components/ui/Button'
+import { LogoMark } from '../components/ui/Logo'
+import { CheckCircle2, ShieldCheck } from 'lucide-react'
 import { Honeypot } from '../components/ui/Honeypot'
 import { useWorkspace } from '../product/workspace'
 
@@ -395,14 +397,33 @@ export function ForgotPasswordPage() {
   )
 }
 
+/** A plain page on its own, opened from the reset email: no site navigation, just the task. */
+function StandaloneShell({ title, subtitle, children }: { title: string; subtitle?: ReactNode; children: ReactNode }) {
+  return (
+    <div className="flex min-h-screen flex-col items-center bg-canvas px-4 py-10 sm:py-16">
+      <div className="flex items-center gap-2.5">
+        <LogoMark />
+        <span className="text-[18px] font-semibold tracking-[-0.02em] text-ink">FormPilot</span>
+      </div>
+      <main id="main" className="mt-8 w-full max-w-[440px] rounded-[var(--radius-panel)] border border-line bg-surface p-6 shadow-[var(--shadow-card)] sm:p-8">
+        <h1 className="text-[24px] font-semibold tracking-[-0.02em] text-ink">{title}</h1>
+        {subtitle && <p className="mt-1.5 text-[15px] text-muted">{subtitle}</p>}
+        <div className="mt-6">{children}</div>
+      </main>
+      <p className="mt-6 flex items-center gap-1.5 text-[13px] text-subtle">
+        <ShieldCheck className="size-3.5" aria-hidden />
+        Secure password reset
+      </p>
+    </div>
+  )
+}
+
 export function ResetPasswordPage() {
   usePageMeta({ title: 'Choose a new password', path: '/reset-password', description: 'Choose a new FormPilot password.' })
   const [params] = useSearchParams()
   const token = params.get('token') ?? ''
   const { setUser } = useAuth()
-  const { open } = useWorkspace()
-  const navigate = useNavigate()
-  const [state, setState] = useState<{ status: 'checking' | 'invalid' | 'valid'; email: string | null }>({ status: 'checking', email: null })
+  const [state, setState] = useState<{ status: 'checking' | 'invalid' | 'valid' | 'done'; email: string | null }>({ status: 'checking', email: null })
   const [values, setValues] = useState({ password: '', confirm: '' })
   const [errors, setErrors] = useState<Record<string, string | undefined>>({})
   const [submitting, setSubmitting] = useState(false)
@@ -435,8 +456,7 @@ export function ResetPasswordPage() {
       // Lets the browser's password manager update the saved password for this account.
       void savePasswordCredential(user.email, values.password, user.full_name)
       setUser(user)
-      open(user)
-      navigate('/dashboard', { replace: true })
+      setState({ status: 'done', email: user.email })
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
     } finally {
@@ -446,27 +466,42 @@ export function ResetPasswordPage() {
 
   if (state.status === 'checking') {
     return (
-      <AuthShell title="Choose a new password" subtitle="Checking your reset link…">
-        <div className="h-40" aria-busy="true" />
-      </AuthShell>
+      <StandaloneShell title="Choose a new password" subtitle="Checking your reset link…">
+        <div className="h-32" aria-busy="true" />
+      </StandaloneShell>
     )
   }
 
   if (state.status === 'invalid') {
     return (
-      <AuthShell title="This link doesn’t work anymore" subtitle="Reset links expire after a short time and can be used only once.">
+      <StandaloneShell title="This link doesn’t work anymore" subtitle="Reset links expire after a short time and can be used only once.">
+        <Button to="/forgot-password" size="lg" className="w-full">
+          Request a new link
+        </Button>
+      </StandaloneShell>
+    )
+  }
+
+  if (state.status === 'done') {
+    return (
+      <StandaloneShell title="Password updated">
         <div className="space-y-5">
-          <Alert tone="danger" title="Invalid or expired link">Request a new link and use it within the time shown in the email.</Alert>
-          <Button to="/forgot-password" size="lg" className="w-full">
-            Request a new link
+          <p className="flex items-start gap-2.5 text-[15px] text-ink-2" role="status">
+            <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success" aria-hidden />
+            <span>
+              The password for {state.email} has been changed. You’ve been signed out on every other device. You can close this tab.
+            </span>
+          </p>
+          <Button to="/dashboard" size="lg" variant="secondary" className="w-full">
+            Continue to FormPilot
           </Button>
         </div>
-      </AuthShell>
+      </StandaloneShell>
     )
   }
 
   return (
-    <AuthShell title="Choose a new password" subtitle={state.email ? <>For {state.email}</> : 'For your FormPilot account'}>
+    <StandaloneShell title="Choose a new password" subtitle={state.email ? <>For {state.email}</> : 'For your FormPilot account'}>
       <form noValidate onSubmit={onSubmit} className="space-y-5">
         {formError && <Alert tone="danger" title="We couldn’t update your password">{formError}</Alert>}
         {/* Hidden username field: tells password managers which saved login to update. */}
@@ -492,8 +527,7 @@ export function ResetPasswordPage() {
         <Button type="submit" size="lg" className="w-full" disabled={submitting}>
           {submitting ? 'Updating…' : 'Update password'}
         </Button>
-        <p className="text-center text-[13px] text-subtle">You’ll be signed in here, and signed out on every other device.</p>
       </form>
-    </AuthShell>
+    </StandaloneShell>
   )
 }

@@ -44,9 +44,10 @@ const router = createBrowserRouter([
       { path: '/login', element: <SignInPage /> },
       { path: '/signup', element: <SignUpPage /> },
       { path: '/forgot-password', element: <ForgotPasswordPage /> },
-      { path: '/reset-password', element: <ResetPasswordPage /> },
     ],
   },
+  // Opened from the reset email: a standalone page without the site or sign-in layout.
+  { path: '/reset-password', element: page(<ResetPasswordPage />) },
   {
     element: (
       <Suspense fallback={appFallback}>
