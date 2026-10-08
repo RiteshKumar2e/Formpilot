@@ -32,6 +32,7 @@ class User(Base):
     documents: Mapped[list["Document"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     choices: Mapped[list["ProfileChoice"]] = relationship(cascade="all, delete-orphan")
     oauth_accounts: Mapped[list["OAuthAccount"]] = relationship(cascade="all, delete-orphan")
+    extension_tokens: Mapped[list["ExtensionToken"]] = relationship(cascade="all, delete-orphan")
     applications: Mapped[list["Application"]] = relationship(cascade="all, delete-orphan")
     reset_tokens: Mapped[list["PasswordResetToken"]] = relationship(cascade="all, delete-orphan")
     webhooks: Mapped[list["Webhook"]] = relationship(cascade="all, delete-orphan")
@@ -51,6 +52,21 @@ class PasswordResetToken(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class ExtensionToken(Base):
+    """Lets one browser's FormPilot extension act for the user. Only the SHA-256 of the token is stored."""
+
+    __tablename__ = "extension_tokens"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(100))
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class OAuthAccount(Base):

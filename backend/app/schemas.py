@@ -256,6 +256,21 @@ class WebhookOut(BaseModel):
     recent_deliveries: list[WebhookDeliveryOut] = []
 
 
+class ExtensionTokenIn(BaseModel):
+    name: str = Field(default="Browser extension", min_length=1, max_length=100)
+
+
+class ExtensionTokenOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+    created_at: datetime
+    expires_at: datetime
+    last_used_at: datetime | None
+    token: str | None = None  # returned once, when the extension is connected
+
+
 class CapabilitiesOut(BaseModel):
     llm: dict
     embeddings: dict

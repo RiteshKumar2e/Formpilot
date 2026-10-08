@@ -7,7 +7,7 @@ from fastapi.responses import RedirectResponse
 from .config import get_settings
 from . import migrations
 from .database import Base, engine
-from .routers import applications, auth, contact, documents, integrations, profile, system, vault
+from .routers import applications, auth, contact, documents, extension, integrations, profile, system, vault
 
 settings = get_settings()
 settings.validate_for_production()
@@ -33,7 +33,7 @@ app.add_middleware(
     allow_origins=settings.cors_origin_list,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
-    allow_headers=["Content-Type", "Accept"],
+    allow_headers=["Content-Type", "Accept", "Authorization"],
 )
 
 
@@ -53,7 +53,15 @@ async def security_headers(request: Request, call_next):
 
 
 for router in (
-    auth.router, documents.router, profile.router, applications.router, vault.router, integrations.router, system.router, contact.router
+    auth.router,
+    documents.router,
+    profile.router,
+    applications.router,
+    vault.router,
+    extension.router,
+    integrations.router,
+    system.router,
+    contact.router,
 ):
     app.include_router(router, prefix="/api")
 
