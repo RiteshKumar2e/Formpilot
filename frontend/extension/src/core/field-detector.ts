@@ -195,6 +195,7 @@ export function detectFields(root: ParentNode = document): DetectedField[] {
     if (field.type !== 'radio' || !field.radios) continue
     field.label = radioGroupLabel(field.radios)
     field.options = field.radios.map(optionLabel)
+    if (field.section === field.label) delete field.section
     // The group's name is shared; give every radio the group's id so any of them maps back to it.
     field.radios.forEach((r) => (r.dataset.formpilotId = field.id))
   }

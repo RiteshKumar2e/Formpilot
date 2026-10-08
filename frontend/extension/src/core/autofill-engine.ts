@@ -28,8 +28,7 @@ export function setNativeValue(el: FieldElement, value: string): void {
   else el.value = value
   fire(el, 'input')
   fire(el, 'change')
-  el.blur()
-  fire(el, 'blur')
+  el.blur() // fires blur/focusout itself, for sites that validate on blur
 }
 
 const same = (a: string, b: string) => clean(a).toLowerCase() === clean(b).toLowerCase()

@@ -175,33 +175,20 @@ export interface TemplateMatch {
   reusable: number
 }
 
-export interface AutofillFieldInput {
-  id: string
-  label: string
-  type: string
-  required?: boolean
-}
+/** Field metadata sent to /api/autofill/suggest; the extension's FieldMeta (extension/src/core/field-detector.ts). */
+export type { FieldMeta as AutofillFieldInput } from '../../extension/src/core/field-detector'
 
-export interface AutofillSuggestion {
-  id: string
-  label: string
-  kind: 'value' | 'answer' | 'document'
-  status: 'ready' | 'needs_review' | 'missing'
-  value: string | null
-  source: string | null
-  confidence: number
-  verified: boolean
-  reasoning: string
-  method: string | null
-  document_id: string | null
-  sources: SmartAnswerSource[]
-}
+/** One suggestion from /api/autofill/suggest; shared with the browser extension. */
+export type { Suggestion as AutofillSuggestion, SuggestResponse as AutofillResponse } from '../../extension/src/core/types'
 
-export interface AutofillResponse {
-  fields: AutofillSuggestion[]
-  summary: { detected: number; ready: number; needs_review: number; missing: number; verified: number; confidence: number }
-  template: TemplateMatch | null
-  workflow_id: string
+export interface ExtensionConnection {
+  id: string
+  name: string
+  created_at: string
+  expires_at: string
+  last_used_at: string | null
+  /** Only when the browser is first connected. */
+  token: string | null
 }
 
 export interface SignUpPayload {

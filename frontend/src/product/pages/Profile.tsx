@@ -25,7 +25,9 @@ const SECTIONS: { id: ProfileSection; title: string }[] = [
 
 /** Details that aren't required for completeness but belong in a full profile, shown so they can be added. */
 const OPTIONAL_FIELDS: { key: string; label: string; section: ProfileSection }[] = [
+  { key: 'gender', label: 'Gender', section: 'personal' },
   { key: 'graduation_year', label: 'Graduation year', section: 'education' },
+  { key: 'cgpa', label: 'CGPA / grade', section: 'education' },
   { key: 'projects', label: 'Projects', section: 'projects' },
   { key: 'achievements', label: 'Achievements', section: 'achievements' },
   { key: 'certifications', label: 'Certifications', section: 'certifications' },

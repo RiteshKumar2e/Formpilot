@@ -3,6 +3,7 @@ import type {
   AutofillFieldInput,
   AutofillResponse,
   Capabilities,
+  ExtensionConnection,
   ContactPayload,
   DocumentRecord,
   MappingResponse,
@@ -178,6 +179,11 @@ export const api = {
     /** What the browser extension sends: the fields it detected on another website's form. */
     suggest: (payload: { fields: AutofillFieldInput[]; page_url?: string; page_title?: string; organization?: string; role?: string }) =>
       request<AutofillResponse>('/autofill/suggest', { method: 'POST', body: JSON.stringify(payload) }),
+  },
+  extension: {
+    list: () => request<ExtensionConnection[]>('/extension/tokens'),
+    connect: (name: string) => request<ExtensionConnection>('/extension/tokens', { method: 'POST', body: JSON.stringify({ name }) }),
+    disconnect: (id: string) => request<void>(`/extension/tokens/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   },
   workflows: {
     list: (subjectId?: string) =>

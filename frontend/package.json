@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b",
-    "build:extension": "tsc -p ../extension/tsconfig.json && node scripts/build-extension.mjs"
+    "build:extension": "tsc -p extension/tsconfig.json && node scripts/build-extension.mjs"
   },
   "dependencies": {
     "framer-motion": "^14.0.0",

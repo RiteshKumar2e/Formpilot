@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Puzzle,
   Search,
   Settings,
   ShieldCheck,
@@ -35,6 +36,7 @@ const NAV = [
   { to: '/mapping', label: 'Field Mapping', icon: GitCompareArrows },
   { to: '/validation', label: 'Validation', icon: ShieldCheck },
   { to: '/anywhere', label: 'Use Anywhere', icon: Globe },
+  { to: '/extension', label: 'Browser Extension', icon: Puzzle },
   { to: '/activity', label: 'Activity', icon: ActivityIcon },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]

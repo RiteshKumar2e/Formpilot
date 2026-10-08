@@ -23,7 +23,7 @@ import { usePageMeta } from '../../hooks/usePageMeta'
 import { api, ApiError } from '../../lib/api'
 import { cn } from '../../lib/utils'
 import type { AutofillResponse, AutofillSuggestion } from '../../types/api'
-import { attachFile, detectFields, setFieldValue, type DetectedField } from '../extension/dom'
+import { attachFile, detectFields, fill, toMeta, type DetectedField } from '../extension/dom'
 import { SmartAnswerCard } from '../SmartAnswer'
 import { PageHeader } from '../ui'
 
@@ -257,7 +257,7 @@ function ExtensionPanel({
   const [reviewing, setReviewing] = useState(false)
   const s = result?.summary
   const pending = result?.fields.filter((f) => !filled.has(f.id) && f.status !== 'missing') ?? []
-  const readyLeft = result?.fields.some((f) => f.status === 'ready' && !filled.has(f.id)) ?? false
+  const readyLeft = result?.fields.some((f) => f.status === 'ready' && !f.sensitive && !filled.has(f.id)) ?? false
   const templateFields = result?.fields.filter((f) => f.method === 'template' && !filled.has(f.id)) ?? []
 
   return (
@@ -410,7 +410,7 @@ function BrowserDemo() {
     setError(null)
     try {
       const res = await api.autofill.suggest({
-        fields: fields.map(({ id, label, type, required }) => ({ id, label, type, required })),
+        fields: toMeta(fields), // the same metadata the browser extension sends
         page_url: PAGE_URL,
         page_title: PAGE_TITLE,
         organization: ORGANIZATION,
@@ -441,8 +441,12 @@ function BrowserDemo() {
       if (s.kind === 'document' && s.document_id && field.element instanceof HTMLInputElement) {
         const blob = await api.documents.download(s.document_id)
         attachFile(field.element, new File([blob], s.value ?? 'document.pdf', { type: blob.type || 'application/pdf' }))
-      } else if (!setFieldValue(field.element, override ?? s.value ?? '')) {
-        return
+      } else {
+        const result = fill(field, override ? { value: override } : { value: s.value ?? '', option: s.option, iso: s.value_iso })
+        if (!result.ok) {
+          setError(result.reason ?? `Couldn’t fill “${s.label}”.`)
+          return
+        }
       }
       highlight(field.element)
       setFilled((prev) => new Set(prev).add(s.id))
@@ -452,7 +456,8 @@ function BrowserDemo() {
   }
 
   const fillReady = () => {
-    result?.fields.filter((f) => f.status === 'ready' && !filled.has(f.id)).forEach((f) => void use(f))
+    // Sensitive fields (date of birth, address) wait for the person's own click, as in the extension.
+    result?.fields.filter((f) => f.status === 'ready' && !f.sensitive && !filled.has(f.id)).forEach((f) => void use(f))
   }
 
   const useTemplate = () => {

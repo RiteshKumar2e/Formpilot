@@ -143,6 +143,8 @@ const SECTION_FOR: Record<string, ProfileSection> = {
   achievements: 'achievements',
   certifications: 'certifications',
   address: 'addresses',
+  gender: 'personal',
+  cgpa: 'education',
 }
 
 const FORM_SECTION: Record<ProfileSection, string> = {

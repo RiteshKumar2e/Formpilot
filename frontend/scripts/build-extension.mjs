@@ -1,5 +1,5 @@
 /**
- * Builds the FormPilot browser extension into extension/dist (load it as an unpacked extension).
+ * Builds the FormPilot browser extension into frontend/extension/dist (load it as an unpacked extension).
  *   npm run build:extension
  * Each entry is bundled on its own: content scripts can't load modules, so everything they need is
  * inlined into one file.
@@ -9,7 +9,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build } from 'vite'
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../extension')
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '../extension')
 const out = resolve(root, 'dist')
 
 const entries = [
