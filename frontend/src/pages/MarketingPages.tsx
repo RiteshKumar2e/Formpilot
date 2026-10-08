@@ -6,16 +6,21 @@ import { ValidationPreview } from '../components/sections/ValidationPreview'
 import { Features } from '../components/sections/Features'
 import { Security } from '../components/sections/Security'
 import { FinalCTA } from '../components/sections/FinalCTA'
+import { UseAnywhere } from '../components/sections/UseAnywhere'
+import { BuildOnce } from '../components/sections/BuildOnce'
+import { SmartAnswers } from '../components/sections/SmartAnswers'
+import { Architecture } from '../components/sections/Architecture'
 
 const PAGES = {
   'how-it-works': {
     title: 'How It Works',
-    heading: 'From your documents to a ready application.',
-    intro: 'Upload once, build a reusable profile, map every form field by meaning, resolve what doesn’t add up, and approve.',
-    description: 'How FormPilot extracts your information, maps it to application fields and validates it before you approve.',
+    heading: 'From your documents to any application.',
+    intro: 'Build your verified profile once. FormPilot maps it to every form by meaning, on FormPilot or any website, flags what doesn’t add up, and waits for your approval.',
+    description: 'How FormPilot builds a verified profile, maps it to application fields on any website, and validates it before you approve.',
     body: (
       <>
         <HowItWorks />
+        <Architecture />
         <SemanticMapping />
         <ValidationPreview />
       </>
@@ -23,11 +28,14 @@ const PAGES = {
   },
   features: {
     title: 'Features',
-    heading: 'Everything you need to apply with confidence.',
-    intro: 'Extraction, semantic mapping, conflict detection and human approval in one workspace.',
-    description: 'FormPilot features: document extraction, semantic field mapping, conflict detection, reusable profile and human approval.',
+    heading: 'One verified profile for every application.',
+    intro: 'A Master Profile and Application Vault you own, the FormPilot extension for other websites, Smart Answers, templates, conflict detection and human approval.',
+    description: 'FormPilot features: Master Profile, Application Vault, browser extension, Smart Answers, templates, semantic mapping and human approval.',
     body: (
       <>
+        <BuildOnce />
+        <UseAnywhere />
+        <SmartAnswers />
         <Features />
         <SemanticMapping />
       </>

@@ -3,10 +3,12 @@ import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   Activity as ActivityIcon,
+  Archive,
   Bell,
   ClipboardList,
   FileText,
   GitCompareArrows,
+  Globe,
   HelpCircle,
   LayoutDashboard,
   LogOut,
@@ -26,11 +28,13 @@ import { HelpPanel } from './HelpPanel'
 
 const NAV = [
   { to: '/dashboard', label: 'Overview', icon: LayoutDashboard },
-  { to: '/profile', label: 'My Profile', icon: User },
+  { to: '/vault', label: 'Application Vault', icon: Archive },
+  { to: '/profile', label: 'Master Profile', icon: User },
   { to: '/documents', label: 'Documents', icon: FileText },
   { to: '/applications', label: 'Applications', icon: ClipboardList },
   { to: '/mapping', label: 'Field Mapping', icon: GitCompareArrows },
   { to: '/validation', label: 'Validation', icon: ShieldCheck },
+  { to: '/anywhere', label: 'Use Anywhere', icon: Globe },
   { to: '/activity', label: 'Activity', icon: ActivityIcon },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]

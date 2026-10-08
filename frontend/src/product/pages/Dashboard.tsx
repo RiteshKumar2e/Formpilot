@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { AlertTriangle, ArrowRight, CheckCircle2, ClipboardList, FilePlus2, FileText, FileUp, UserRoundCheck } from 'lucide-react'
+import {
+  Archive,
+  Globe, AlertTriangle, ArrowRight, CheckCircle2, ClipboardList, FilePlus2, FileText, FileUp, UserRoundCheck } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import { useWorkspace } from '../workspace'
@@ -56,6 +58,55 @@ export function DashboardPage() {
         <Stat label="Documents" value={String(data.documents.length)} note={`${processedDocs} processed`} to="/documents" />
         <Stat label="Applications" value={String(data.applications.length)} note={`${prepared} ready for submission`} to="/applications" />
         <Stat label="Needs Review" value={String(review)} note={review ? 'Resolve before approving' : 'Nothing waiting'} tone={review ? 'warning' : undefined} to="/validation" />
+      </div>
+
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-2">
+        <Card className="p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="flex items-center gap-2 text-[16px] font-semibold text-ink">
+                <Archive className="size-4 text-accent" aria-hidden />
+                Application Vault
+              </h2>
+              <p className="mt-1 text-[14px] text-muted">Build once. Verify once. Reuse everywhere.</p>
+            </div>
+            <Button to="/vault" size="sm" variant="secondary">
+              Open Vault
+            </Button>
+          </div>
+          <ul className="mt-4 grid grid-cols-2 gap-2 text-[13px] sm:grid-cols-3">
+            {[
+              { to: '/profile', label: 'Master Profile', note: `${data.profile.filter((f) => f.value).length} details` },
+              { to: '/vault?tab=documents', label: 'Documents', note: `${data.documents.length} files` },
+              { to: '/vault?tab=applications', label: 'Saved Applications', note: `${data.applications.length} saved` },
+              { to: '/vault?tab=templates', label: 'Templates', note: 'Reuse completed forms' },
+              { to: '/vault?tab=answers', label: 'Common Answers', note: 'Answer once' },
+            ].map((item) => (
+              <li key={item.to}>
+                <Link to={item.to} className="block rounded-[var(--radius-control)] border border-line px-3 py-2 hover:border-accent-line hover:bg-panel">
+                  <span className="block font-medium text-ink">{item.label}</span>
+                  <span className="block text-subtle">{item.note}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
+        <Card className="flex flex-col justify-between gap-4 bg-panel p-5">
+          <div>
+            <h2 className="flex items-center gap-2 text-[16px] font-semibold text-ink">
+              <Globe className="size-4 text-accent" aria-hidden />
+              Use FormPilot anywhere
+            </h2>
+            <p className="mt-1 text-[14px] text-ink-2">
+              Take your verified profile to other websites. The FormPilot extension detects a form, suggests values with their sources, and fills only what you approve.
+            </p>
+          </div>
+          <div>
+            <Button to="/anywhere" size="sm">
+              Try it on CareerHub
+            </Button>
+          </div>
+        </Card>
       </div>
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">

@@ -8,6 +8,9 @@ import { ValidationPreview } from '../components/sections/ValidationPreview'
 import { UseCases } from '../components/sections/UseCases'
 import { Security } from '../components/sections/Security'
 import { FinalCTA } from '../components/sections/FinalCTA'
+import { UseAnywhere } from '../components/sections/UseAnywhere'
+import { BuildOnce } from '../components/sections/BuildOnce'
+import { SmartAnswers } from '../components/sections/SmartAnswers'
 
 export function HomePage() {
   usePageMeta({ path: '/' })
@@ -15,9 +18,12 @@ export function HomePage() {
     <>
       <Hero />
       <Problem />
+      <BuildOnce />
+      <UseAnywhere />
       <HowItWorks />
       <ProductPreview />
       <SemanticMapping />
+      <SmartAnswers />
       <ValidationPreview />
       <UseCases />
       <Security />

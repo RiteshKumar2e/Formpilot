@@ -29,6 +29,8 @@ const FieldMappingPage = lazy(() => import('./product/pages/FieldMapping').then(
 const ValidationPage = lazy(() => import('./product/pages/Validation').then((m) => ({ default: m.ValidationPage })))
 const ActivityPage = lazy(() => import('./product/pages/Activity').then((m) => ({ default: m.ActivityPage })))
 const SettingsPage = lazy(() => import('./product/pages/Settings').then((m) => ({ default: m.SettingsPage })))
+const VaultPage = lazy(() => import('./product/pages/Vault').then((m) => ({ default: m.VaultPage })))
+const AnywherePage = lazy(() => import('./product/pages/Anywhere').then((m) => ({ default: m.AnywherePage })))
 
 const appFallback = <div className="min-h-dvh bg-canvas" aria-busy="true" />
 const page = (node: ReactNode) => <Suspense fallback={<div className="min-h-[60vh]" aria-busy="true" />}>{node}</Suspense>
@@ -49,6 +51,8 @@ const router = createBrowserRouter([
     ),
     children: [
       { path: '/dashboard', element: page(<DashboardPage />) },
+      { path: '/vault', element: page(<VaultPage />) },
+      { path: '/anywhere', element: page(<AnywherePage />) },
       { path: '/profile', element: page(<ProfilePage />) },
       { path: '/documents', element: page(<DocumentsPage />) },
       { path: '/applications', element: page(<ApplicationsPage />) },
