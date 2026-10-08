@@ -592,7 +592,8 @@ export function AnywherePage() {
     <div className="space-y-6">
       <PageHeader
         title="Use FormPilot anywhere"
-        description="Take your verified profile with you across supported web applications. Below, the FormPilot extension runs on CareerHub, a fictional job portal, using your real profile."
+        description="Build your profile once. Fill forms anywhere. This demo runs the browser extension’s own detection and fill code on CareerHub, a fictional job portal, with your real profile. Install the extension to do the same on any website."
+        actions={<Button to="/extension">Get the extension</Button>}
       />
       <ol className="flex flex-wrap items-center gap-x-2 gap-y-2 text-[13px]" aria-label="How the extension works">
         {FLOW.map((step, i) => (

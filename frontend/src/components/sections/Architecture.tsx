@@ -65,7 +65,7 @@ export function Architecture() {
             <Node title="Fill Form" note="Never submitted for you" />
           </Stack>
           <figcaption className="mt-6 text-center text-[13px] text-subtle">
-            The extension is the production integration layer. The hackathon MVP runs the same detection and fill code on a simulated portal.
+            The Chrome/Edge extension (Manifest V3) is the integration layer for any website. The in-app CareerHub demo runs the same detection and fill code on a simulated portal.
           </figcaption>
         </figure>
       </Container>

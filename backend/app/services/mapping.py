@@ -27,6 +27,11 @@ OTHER_ENTITY_RE = re.compile(
     re.I,
 )
 PERSONAL_KEYS = {"full_name", "first_name", "last_name", "email", "phone", "address", "date_of_birth", "gender"}
+# Identity, bank and card numbers: never answered with a contact detail, however similar the wording.
+ID_NUMBER_RE = re.compile(
+    r"\b(aadhaa?r|passport|pan|ssn|bank|account|ifsc|iban|swift|routing|licen[cs]e|card|tax|voter)\b", re.I
+)
+NAME_WORD_RE = re.compile(r"\b(name|surname|forename)\b", re.I)
 
 # Tuned on eval/form_labels.json for few wrong fills over maximum coverage (see eval/run_eval.py).
 SEMANTIC_MIN = 0.76
@@ -95,6 +100,13 @@ def classify_hybrid(label: str) -> tuple[str | None, float, str]:
     if key in PERSONAL_KEYS and OTHER_ENTITY_RE.search(label):
         # e.g. "Emergency contact phone" is someone else's number, not the applicant's.
         key = "emergency_contact" if re.search(r"emergency|guardian|kin", label, re.I) else None
+    if key in PERSONAL_KEYS and ID_NUMBER_RE.search(label):
+        key = None  # "Bank account number" is not a phone number
+    if key in ("first_name", "last_name"):
+        if not NAME_WORD_RE.search(label):
+            key = None  # "Nationality" sounds like "surname" to an embedding model, but isn't a name
+        elif re.search(r"\bfirst\b", label, re.I) and re.search(r"\b(last|sur|family)", label, re.I):
+            key = "full_name"  # "First and last name" asks for the whole name
     if key:
         return key, score, matcher
     return None, score, "lexical"

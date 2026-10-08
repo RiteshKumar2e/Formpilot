@@ -60,7 +60,7 @@ CONCEPTS: dict[str, list[str]] = {
     "last_name": ["last name", "surname", "family name"],
     "projects": ["projects", "key projects", "academic projects", "personal projects", "project experience", "notable projects"],
     "achievements": ["achievements", "awards", "honours and awards", "accomplishments", "awards and achievements", "recognition"],
-    "certifications": ["certifications", "certificates", "licenses and certifications", "professional certifications", "courses completed"],
+    "certifications": ["certifications", "certificates", "licenses and certifications", "professional certifications", "certificate courses"],
     # "Current Address" vs "Email Address": listing addresses stops look-alike labels matching the wrong field.
     "address": ["address", "current address", "residential address", "permanent address", "mailing address", "home address", "city"],
     "emergency_contact": ["emergency contact", "emergency contact number", "guardian contact", "next of kin"],

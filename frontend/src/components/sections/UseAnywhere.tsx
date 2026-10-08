@@ -127,7 +127,7 @@ export function UseAnywhere() {
               id="anywhere-title"
               eyebrow="Use FormPilot anywhere"
               title="Use FormPilot anywhere."
-              description="Take your verified profile with you across supported web applications. The FormPilot browser extension understands the form in front of you, fills what it can, flags what it can’t, and leaves the final decision to you."
+              description="Build your profile once. Fill forms anywhere. The FormPilot extension for Chrome and Edge reads the form on any website, works out what each field means, fills what it can, flags what it can’t, and leaves the final decision to you. No site-specific setup."
             />
             <ol className="mt-10 space-y-1">
               {FLOW.map((f, i) => (
@@ -152,9 +152,12 @@ export function UseAnywhere() {
               review, not chosen automatically.
             </p>
             <div className="mt-6">
-              <Button to="/anywhere" variant="secondary">
-                Try the live demo
-              </Button>
+              <div className="flex flex-wrap gap-3">
+                <Button to="/extension">Get the extension</Button>
+                <Button to="/anywhere" variant="secondary">
+                  Try the live demo
+                </Button>
+              </div>
             </div>
           </div>
           <ExtensionMockup />
