@@ -4,15 +4,15 @@
 
 # FormPilot
 
-**One Profile. Every Application.**
+**Your reusable application profile. Build once. Verify once. Reuse everywhere.**
 
-Upload your documents once. FormPilot extracts your details into a verified profile, maps them to any application form by meaning, flags conflicts between documents, and waits for your approval before anything is used.
+Instead of typing the same information into every website, you create your verified profile once in FormPilot. When you meet another application, FormPilot understands the form, finds the right information, fills what it can, flags what it can't, and lets you review everything before you submit.
 
 ![React](https://img.shields.io/badge/React-19-0e0e62?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-0e0e62?logo=typescript&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-0e0e62?logo=tailwindcss&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Python_3.10+-0e0e62?logo=fastapi&logoColor=white)
-![Tests](https://img.shields.io/badge/backend_tests-45_passing-1f7a4d)
+![Tests](https://img.shields.io/badge/backend_tests-57_passing-1f7a4d)
 ![License: MIT](https://img.shields.io/badge/license-MIT-ffc72c)
 
 </div>
@@ -52,6 +52,11 @@ Students, job seekers and professionals type the same facts into portal after po
 
 | | |
 | --- | --- |
+| **Master Profile** | Personal and contact details, education, work experience, skills, projects, achievements, certifications, professional links and addresses. Every value shows its source documents, verification status (confirmed by you, found in several documents, or read with high confidence), last-updated date and confidence. |
+| **Application Vault** | Master Profile, documents, saved applications, application templates and common answers in one place. |
+| **Use FormPilot anywhere** | The browser-extension flow: detect a form's fields on another website, understand them, retrieve your data, suggest values with sources, let you review, then fill. Never submits. Demonstrated on CareerHub, a simulated job portal in the app. |
+| **Smart Answers** | Suggested answers to open questions ("Why do you want to join us?") drafted from your profile, documents and saved answers, with the sources shown. Always a suggestion: Use, Edit or Regenerate. |
+| **Templates** | Save a completed application as a template. When a similar form appears, FormPilot offers to reuse its answers; reused values are marked for review. |
 | **Document extraction** | Reads PDFs (and scanned images when OCR is enabled). Pattern rules and an LLM on Groq extract name, contact details, date of birth, degree, institution, graduation year, experience, skills and profile links, each with a confidence score. Every LLM value must appear in the document or it is discarded. |
 | **Reusable profile** | Merges details from all your documents into one profile. Every value lists the documents it came from. |
 | **Conflict detection** | When two documents disagree (for example, two different dates of birth), FormPilot shows both values with their sources and asks you to choose. Your choice is saved and applied everywhere. |
@@ -218,8 +223,10 @@ Only `VITE_`-prefixed variables reach the browser. No secrets are shipped to the
 
 | Route | What it shows |
 | --- | --- |
-| `/dashboard` | Profile completion, documents, applications, quick actions and recent activity |
-| `/profile` | Every profile value with its source document and verification; add missing details or fix values |
+| `/dashboard` | Profile completion, the Application Vault, Use FormPilot anywhere, applications and recent activity |
+| `/vault` | Application Vault: Master Profile, documents, saved applications, templates and common answers |
+| `/profile` | Master Profile: every value with sources, verification, last update and confidence; add or edit any detail |
+| `/anywhere` | The extension demo on CareerHub, a fictional job portal: detect, suggest, review, fill, never submit |
 | `/documents` | Category filters, a detail drawer with extracted fields and confidence, and upload with clear error states |
 | `/applications`, `/applications/new` | Status filters; create an application from a type, a template or a pasted list of field labels |
 | `/applications/:id` | Workspace: application structure, the mapped form, and an assistant with source, confidence and reasoning |
@@ -259,6 +266,15 @@ All endpoints are under `/api`. Authenticated endpoints use the `fp_session` htt
 | `POST` | `/integrations/webhooks` | ✓ | Add a webhook; returns its signing secret once |
 | `DELETE` | `/integrations/webhooks/{id}` | ✓ | Remove a webhook |
 | `GET` | `/system/capabilities` | ✓ | Which AI components are active |
+| `GET` | `/documents/{id}/file` | ✓ | The original file, decrypted for its owner |
+| `GET`, `POST` | `/answers` | ✓ | Common answers: list and add |
+| `PUT`, `DELETE` | `/answers/{id}` | ✓ | Edit or delete a common answer |
+| `POST` | `/answers/suggest` | ✓ | Smart Answer for an open question, with sources (always a suggestion) |
+| `GET`, `POST` | `/templates` | ✓ | Application templates: list and save |
+| `DELETE` | `/templates/{id}` | ✓ | Delete a template |
+| `POST` | `/templates/match` | ✓ | The saved template most similar to a form's labels, if any |
+| `POST` | `/templates/{id}/use` | ✓ | Record that a template was reused |
+| `POST` | `/autofill/suggest` | ✓ | **Browser extension API.** Suggestions for fields detected on another website, each `ready`, `needs_review` or `missing` |
 | `POST` | `/contact` | | Send a contact message |
 | `GET` | `/health` | | Health check |
 
@@ -313,6 +329,8 @@ Formpilot/
         ├── pages/               # Landing, auth, about, contact, legal, 404
         ├── product/             # The signed-in app
         │   ├── workspace.tsx    # API calls and app state
+        │   ├── extension/dom.ts # Field detection and filling on other websites (the extension's core)
+        │   ├── SmartAnswer.tsx  # Suggested answers: Use, Edit, Regenerate
         │   ├── selectors.ts     # Progress, validation and status logic
         │   ├── templates.ts     # Typical fields per application type
         │   └── pages/           # Dashboard, Profile, Documents, Applications, ...
@@ -323,8 +341,9 @@ Formpilot/
 ## Testing
 
 ```bash
-# Backend: 45 tests covering auth, Google OAuth, uploads, extraction, LLM grounding, RAG mapping,
-# vector search, workflows, webhooks, applications, encryption at rest, rate limits and HTTPS.
+# Backend: 57 tests covering auth, Google OAuth, uploads, extraction, the Master Profile, LLM grounding,
+# RAG mapping, Smart Answers, templates, the extension autofill API, vector search, workflows,
+# webhooks, applications, encryption at rest, rate limits and HTTPS.
 # They run offline: LLM calls are faked and the hash embedder is used.
 cd backend
 python -m pytest -q
@@ -373,6 +392,7 @@ Found a security issue? Please email the address under [Contact](#contact) rathe
 
 Everything described above is built and tested. Next:
 
+- [ ] Package the FormPilot browser extension (Chrome/Edge) on top of `frontend/src/product/extension/dom.ts` and `POST /api/autofill/suggest`
 - [ ] Password reset by email and two-factor authentication
 - [ ] Reading fields directly from PDF application forms
 - [ ] A larger, held-out eval set and LLM-on accuracy numbers
