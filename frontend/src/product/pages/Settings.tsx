@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import { useAuth } from '../../hooks/useAuth'
+import { PasswordField } from '../../components/ui/FormControls'
 import { api, ApiError } from '../../lib/api'
+import { savePasswordCredential } from '../../lib/credentials'
+import { validatePassword } from '../../lib/utils'
 import type { Capabilities, Webhook, WebhookEvent } from '../../types/api'
 import { cn } from '../../lib/utils'
 import { useWorkspace } from '../workspace'
@@ -194,6 +197,94 @@ function Integrations() {
   )
 }
 
+function ChangePassword({ email, name }: { email: string; name: string }) {
+  const [open, setOpen] = useState(false)
+  const [values, setValues] = useState({ current: '', next: '', confirm: '' })
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({})
+  const [formError, setFormError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [done, setDone] = useState(false)
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault()
+    setFormError(null)
+    const next = {
+      next: validatePassword(values.next),
+      confirm: values.confirm === values.next ? undefined : 'The passwords don’t match.',
+    }
+    setErrors(next)
+    if (next.next || next.confirm) return
+    setSaving(true)
+    try {
+      await api.auth.changePassword(values.current, values.next)
+      // Lets the browser's password manager update the saved password.
+      void savePasswordCredential(email, values.next, name)
+      setDone(true)
+      setOpen(false)
+      setValues({ current: '', next: '', confirm: '' })
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : 'Couldn’t change your password.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!open) {
+    return (
+      <div className="flex items-center gap-3">
+        {done && <span role="status" className="text-[13px] text-success">Password updated</span>}
+        <Button variant="secondary" size="sm" onClick={() => { setOpen(true); setDone(false) }}>
+          Change password
+        </Button>
+      </div>
+    )
+  }
+  return (
+    <form onSubmit={submit} noValidate className="w-full space-y-3 sm:w-[340px]">
+      {/* Hidden username field: tells password managers which saved login to update. */}
+      <input type="email" name="email" autoComplete="username" value={email} readOnly hidden />
+      <PasswordField
+        label="Current password"
+        name="current-password"
+        autoComplete="current-password"
+        value={values.current}
+        hint="Leave empty if you signed up with Google and never set one."
+        onChange={(e) => setValues({ ...values, current: e.target.value })}
+      />
+      <PasswordField
+        label="New password"
+        name="new-password"
+        autoComplete="new-password"
+        value={values.next}
+        error={errors.next}
+        onChange={(e) => setValues({ ...values, next: e.target.value })}
+      />
+      <PasswordField
+        label="Confirm new password"
+        name="confirm-password"
+        autoComplete="new-password"
+        value={values.confirm}
+        error={errors.confirm}
+        onChange={(e) => setValues({ ...values, confirm: e.target.value })}
+      />
+      {formError && (
+        <p role="alert" className="text-[13px] text-danger">
+          {formError}
+        </p>
+      )}
+      <div className="flex gap-2">
+        <Button type="submit" size="sm" disabled={saving}>
+          {saving ? 'Updating…' : 'Update password'}
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => setOpen(false)}>
+          Cancel
+        </Button>
+      </div>
+      <p className="text-[12px] text-subtle">Other devices will be signed out.</p>
+    </form>
+  )
+}
+
 function readPrefs() {
   try {
     return { ...{ review: true, processed: true, weekly: false }, ...JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') }
@@ -253,7 +344,7 @@ export function SettingsPage() {
 
       <Section title="Security" description="Protect access to your documents.">
         <Row label="Password" hint="Hashed with scrypt. Never stored in plain text.">
-          <Badge>Change password: planned</Badge>
+          <ChangePassword email={data.user.email} name={data.user.name} />
         </Row>
         <Row label="Two-factor authentication" hint="An extra code when you sign in.">
           <div className="flex items-center gap-3">
@@ -261,7 +352,7 @@ export function SettingsPage() {
             <Toggle checked={false} disabled label="Two-factor authentication" />
           </div>
         </Row>
-        <Row label="Session" hint="Sessions expire after 12 hours.">
+        <Row label="Session" hint="With “Remember me”, 30 days on this device. Otherwise until you close your browser.">
           <span className="text-[14px] text-ink-2">Active</span>
         </Row>
       </Section>

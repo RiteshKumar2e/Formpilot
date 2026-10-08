@@ -281,7 +281,7 @@ function fromApiMatch(m: FieldMatch, profile: ProfileField[]): ApplicationField 
 function toWorkspaceError(err: unknown, fallback: string): WorkspaceError {
   if (err instanceof WorkspaceError) return err
   if (err instanceof ApiError) {
-    if (err.status === 401) return new WorkspaceError('Your session expired.', 'For your security, sessions end after 12 hours.', 'signin')
+    if (err.status === 401) return new WorkspaceError('Your session expired.', 'Sign in again to continue. Sessions end after a while, or when your password changes.', 'signin')
     if (err.status === 0) return new WorkspaceError('Network error.', 'FormPilot couldn’t reach the server. Check your connection.', 'retry')
     if (err.status === 415) return new WorkspaceError('Unsupported file.', err.message, 'choose_file')
     if (err.status === 413) return new WorkspaceError('File too large.', err.message, 'choose_file')

@@ -15,6 +15,8 @@ const PrivacyPage = lazy(() => import('./pages/LegalPages').then((m) => ({ defau
 const TermsPage = lazy(() => import('./pages/LegalPages').then((m) => ({ default: m.TermsPage })))
 const SignUpPage = lazy(() => import('./pages/AuthPages').then((m) => ({ default: m.GetStartedPage })))
 const SignInPage = lazy(() => import('./pages/AuthPages').then((m) => ({ default: m.SignInPage })))
+const ForgotPasswordPage = lazy(() => import('./pages/AuthPages').then((m) => ({ default: m.ForgotPasswordPage })))
+const ResetPasswordPage = lazy(() => import('./pages/AuthPages').then((m) => ({ default: m.ResetPasswordPage })))
 
 // Product (loaded only when someone enters the app)
 const AppLayout = lazy(() => import('./product/AppLayout').then((m) => ({ default: m.AppLayout })))
@@ -41,6 +43,8 @@ const router = createBrowserRouter([
     children: [
       { path: '/login', element: <SignInPage /> },
       { path: '/signup', element: <SignUpPage /> },
+      { path: '/forgot-password', element: <ForgotPasswordPage /> },
+      { path: '/reset-password', element: <ResetPasswordPage /> },
     ],
   },
   {

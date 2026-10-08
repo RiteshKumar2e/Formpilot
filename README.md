@@ -12,7 +12,7 @@ Instead of typing the same information into every website, you create your verif
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-0e0e62?logo=typescript&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-0e0e62?logo=tailwindcss&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Python_3.10+-0e0e62?logo=fastapi&logoColor=white)
-![Tests](https://img.shields.io/badge/backend_tests-57_passing-1f7a4d)
+![Tests](https://img.shields.io/badge/backend_tests-63_passing-1f7a4d)
 ![License: MIT](https://img.shields.io/badge/license-MIT-ffc72c)
 
 </div>
@@ -198,7 +198,10 @@ Create a key at [console.groq.com/keys](https://console.groq.com/keys) and set `
 | `ENFORCE_HTTPS` | on in production | Redirects HTTP to HTTPS and sends HSTS. |
 | `TRUST_PROXY_HEADERS` | `false` | Trust `X-Forwarded-*` when behind a reverse proxy you control. |
 | `RATE_LIMIT_ENABLED` | `true` | Per-IP limits on sign-up, sign-in, contact and uploads. |
-| `SESSION_HOURS` | `12` | Session lifetime. |
+| `SESSION_HOURS` | `12` | Session lifetime without "Remember me" (the cookie also ends when the browser closes). |
+| `REMEMBER_DAYS` | `30` | Session lifetime with "Remember me". |
+| `RESET_TOKEN_MINUTES` | `30` | How long a password reset link works. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | empty, `587` | Email server for reset links. Without it, links are logged and, outside production, shown on the Forgot Password page. |
 
 Generate keys:
 
@@ -244,7 +247,11 @@ All endpoints are under `/api`. Authenticated endpoints use the `fp_session` htt
 | Method | Endpoint | Auth | Description |
 | --- | --- | :---: | --- |
 | `POST` | `/auth/signup` | | Create an account and start a session |
-| `POST` | `/auth/signin` | | Sign in |
+| `POST` | `/auth/signin` | | Sign in; `remember: true` keeps the session for 30 days |
+| `POST` | `/auth/password/forgot` | | Email a single-use reset link (same response whether or not the account exists) |
+| `GET` | `/auth/password/reset?token=` | | Whether a reset link still works |
+| `POST` | `/auth/password/reset` | | Set a new password from a reset link; signs out other devices |
+| `POST` | `/auth/password/change` | ✓ | Change the password; signs out other devices |
 | `POST` | `/auth/signout` | | End the session |
 | `GET` | `/auth/session` | | Current user, or `null` (always 200) |
 | `GET` | `/auth/me` | ✓ | Current user |
@@ -341,7 +348,7 @@ Formpilot/
 ## Testing
 
 ```bash
-# Backend: 57 tests covering auth, Google OAuth, uploads, extraction, the Master Profile, LLM grounding,
+# Backend: 63 tests covering auth, remember me, password reset and change, Google OAuth, uploads, extraction, the Master Profile, LLM grounding,
 # RAG mapping, Smart Answers, templates, the extension autofill API, vector search, workflows,
 # webhooks, applications, encryption at rest, rate limits and HTTPS.
 # They run offline: LLM calls are faked and the hash embedder is used.
@@ -369,7 +376,9 @@ Extraction with rules only: 83% precision, 74% recall on 27 labelled fields. The
 
 - **Encryption at rest:** uploaded files, extracted values, document passages, applications and webhook secrets are encrypted with Fernet before they are written. Embedding vectors are stored unencrypted so the database can search them.
 - **Passwords:** hashed with scrypt; never stored in plain text.
-- **Sessions:** JWT in an httpOnly, SameSite=Lax cookie that page scripts can't read, with a 12-hour expiry.
+- **Sessions:** JWT in an httpOnly, SameSite=Lax cookie that page scripts can't read. Without "Remember me" it ends when the browser closes (12 hours at most); with it, 30 days. Changing or resetting the password signs out every other session.
+- **Password reset:** single-use links that expire in 30 minutes; only a SHA-256 hash of the token is stored, and the response never reveals whether an account exists.
+- **Password managers:** sign-in, sign-up, reset and change use standard autocomplete attributes and the Credential Management API, so browsers offer to save or update the password.
 - **Sign in with Google:** authorization code flow with PKCE and a signed state cookie; accounts are linked only for Google-verified emails.
 - **LLM safety:** document text is passed to the model as data; every model answer must be found in the user's documents, and conflicts always go to the user.
 - **Webhooks:** HMAC-signed; in production only public `https` addresses are allowed, checked when added and again before each delivery.
@@ -393,7 +402,7 @@ Found a security issue? Please email the address under [Contact](#contact) rathe
 Everything described above is built and tested. Next:
 
 - [ ] Package the FormPilot browser extension (Chrome/Edge) on top of `frontend/src/product/extension/dom.ts` and `POST /api/autofill/suggest`
-- [ ] Password reset by email and two-factor authentication
+- [ ] Two-factor authentication
 - [ ] Reading fields directly from PDF application forms
 - [ ] A larger, held-out eval set and LLM-on accuracy numbers
 - [ ] Filling forms on third-party sites, with approval for every submission

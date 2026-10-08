@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, ApiError } from '../lib/api'
+import { savePasswordCredential } from '../lib/credentials'
 import { cn, validateEmail, validatePassword, validateRequired } from '../lib/utils'
 import { useAuth } from '../hooks/useAuth'
 import { usePageMeta } from '../hooks/usePageMeta'
@@ -130,6 +131,7 @@ export function GetStartedPage() {
     setSubmitting(true)
     try {
       const created = await api.auth.signUp({ ...values, email: values.email.trim(), full_name: values.full_name.trim(), website })
+      void savePasswordCredential(created.email, values.password, created.full_name)
       setUser(created)
       open(created)
       navigate('/dashboard')
@@ -168,7 +170,7 @@ export function GetStartedPage() {
           label="Email"
           name="email"
           type="email"
-          autoComplete="email"
+          autoComplete="username"
           inputMode="email"
           value={values.email}
           error={errors.email}
@@ -228,6 +230,7 @@ export function SignInPage() {
   const [params] = useSearchParams()
   const next = params.get('next')?.startsWith('/') ? params.get('next')! : '/dashboard'
   const [values, setValues] = useState({ email: '', password: '' })
+  const [remember, setRemember] = useState(true)
   const [errors, setErrors] = useState<Record<string, string | undefined>>({})
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -245,7 +248,8 @@ export function SignInPage() {
     if (Object.values(nextErrors).some(Boolean)) return
     setSubmitting(true)
     try {
-      const signedIn = await api.auth.signIn({ email: values.email.trim(), password: values.password })
+      const signedIn = await api.auth.signIn({ email: values.email.trim(), password: values.password, remember })
+      void savePasswordCredential(signedIn.email, values.password, signedIn.full_name)
       setUser(signedIn)
       open(signedIn)
       navigate(next)
@@ -275,7 +279,7 @@ export function SignInPage() {
           label="Email"
           name="email"
           type="email"
-          autoComplete="email"
+          autoComplete="username"
           inputMode="email"
           value={values.email}
           error={errors.email}
@@ -289,15 +293,204 @@ export function SignInPage() {
           error={errors.password}
           onChange={(e) => setValues({ ...values, password: e.target.value })}
         />
+        <div className="flex items-center justify-between gap-3">
+          <label className="flex items-center gap-2.5 text-[14px] text-ink-2">
+            <input type="checkbox" name="remember" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="size-4 rounded accent-accent" />
+            Remember me
+          </label>
+          <Link to={`/forgot-password${values.email ? `?email=${encodeURIComponent(values.email.trim())}` : ''}`} className="text-[14px] font-medium text-accent underline underline-offset-2">
+            Forgot password?
+          </Link>
+        </div>
         <Button type="submit" size="lg" className="w-full" disabled={submitting}>
           {submitting ? 'Signing in…' : 'Sign In'}
         </Button>
-        <p className="text-center text-[14px] text-muted">
-          Forgot your password?{' '}
-          <Link to="/contact" className="font-medium text-accent underline underline-offset-2">
-            Contact support
-          </Link>
+        <p className="text-center text-[13px] text-subtle">
+          {remember ? 'You’ll stay signed in on this device for 30 days.' : 'You’ll be signed out when you close your browser.'}
         </p>
+      </form>
+    </AuthShell>
+  )
+}
+
+
+export function ForgotPasswordPage() {
+  usePageMeta({ title: 'Forgot password', path: '/forgot-password', description: 'Reset your FormPilot password.' })
+  const [params] = useSearchParams()
+  const [email, setEmail] = useState(params.get('email') ?? '')
+  const [error, setError] = useState<string | undefined>()
+  const [submitting, setSubmitting] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [sent, setSent] = useState<{ email: string; minutes: number; devLink: string | null } | null>(null)
+
+  const onSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    setFormError(null)
+    const invalid = validateEmail(email)
+    setError(invalid)
+    if (invalid) return
+    setSubmitting(true)
+    try {
+      const res = await api.auth.forgotPassword(email.trim())
+      setSent({ email: email.trim(), minutes: res.expires_minutes, devLink: res.reset_url })
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <AuthShell
+      title="Forgot your password?"
+      subtitle={
+        <>
+          Remembered it?{' '}
+          <Link to="/login" className="font-medium text-accent underline underline-offset-2">
+            Back to sign in
+          </Link>
+        </>
+      }
+    >
+      {sent ? (
+        <div className="space-y-5">
+          <Alert tone="success" title="Check your email">
+            If an account exists for {sent.email}, we’ve sent a link to reset your password. It works once and expires in {sent.minutes} minutes.
+          </Alert>
+          {sent.devLink && (
+            <div className="rounded-[var(--radius-control)] border border-dashed border-line-strong bg-canvas p-4 text-[14px]">
+              <p className="font-medium text-ink">Development mode: no email server is configured</p>
+              <p className="mt-1 text-ink-2">Use the link directly. In production it is only sent by email.</p>
+              <Link to={new URL(sent.devLink).pathname + new URL(sent.devLink).search} className="mt-3 inline-block font-medium text-accent underline underline-offset-2">
+                Open reset link
+              </Link>
+            </div>
+          )}
+          <Button variant="secondary" size="lg" className="w-full" onClick={() => setSent(null)}>
+            Send another link
+          </Button>
+        </div>
+      ) : (
+        <form noValidate onSubmit={onSubmit} className="space-y-5">
+          {formError && <Alert tone="danger" title="We couldn’t send the link">{formError}</Alert>}
+          <p className="text-[15px] text-muted">Enter the email you signed up with and we’ll send you a link to choose a new password.</p>
+          <TextField
+            label="Email"
+            name="email"
+            type="email"
+            autoComplete="username"
+            inputMode="email"
+            value={email}
+            error={error}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <Button type="submit" size="lg" className="w-full" disabled={submitting}>
+            {submitting ? 'Sending…' : 'Send reset link'}
+          </Button>
+        </form>
+      )}
+    </AuthShell>
+  )
+}
+
+export function ResetPasswordPage() {
+  usePageMeta({ title: 'Choose a new password', path: '/reset-password', description: 'Choose a new FormPilot password.' })
+  const [params] = useSearchParams()
+  const token = params.get('token') ?? ''
+  const { setUser } = useAuth()
+  const { open } = useWorkspace()
+  const navigate = useNavigate()
+  const [state, setState] = useState<{ status: 'checking' | 'invalid' | 'valid'; email: string | null }>({ status: 'checking', email: null })
+  const [values, setValues] = useState({ password: '', confirm: '' })
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({})
+  const [submitting, setSubmitting] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!token) return setState({ status: 'invalid', email: null })
+    let active = true
+    api.auth.checkResetToken(token).then(
+      (res) => active && setState({ status: res.valid ? 'valid' : 'invalid', email: res.email }),
+      () => active && setState({ status: 'invalid', email: null }),
+    )
+    return () => {
+      active = false
+    }
+  }, [token])
+
+  const onSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    setFormError(null)
+    const next = {
+      password: validatePassword(values.password),
+      confirm: values.confirm ? (values.confirm === values.password ? undefined : 'The passwords don’t match.') : 'Confirm your new password.',
+    }
+    setErrors(next)
+    if (next.password || next.confirm) return
+    setSubmitting(true)
+    try {
+      const user = await api.auth.resetPassword(token, values.password)
+      // Lets the browser's password manager update the saved password for this account.
+      void savePasswordCredential(user.email, values.password, user.full_name)
+      setUser(user)
+      open(user)
+      navigate('/dashboard', { replace: true })
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (state.status === 'checking') {
+    return (
+      <AuthShell title="Choose a new password" subtitle="Checking your reset link…">
+        <div className="h-40" aria-busy="true" />
+      </AuthShell>
+    )
+  }
+
+  if (state.status === 'invalid') {
+    return (
+      <AuthShell title="This link doesn’t work anymore" subtitle="Reset links expire after a short time and can be used only once.">
+        <div className="space-y-5">
+          <Alert tone="danger" title="Invalid or expired link">Request a new link and use it within the time shown in the email.</Alert>
+          <Button to="/forgot-password" size="lg" className="w-full">
+            Request a new link
+          </Button>
+        </div>
+      </AuthShell>
+    )
+  }
+
+  return (
+    <AuthShell title="Choose a new password" subtitle={state.email ? <>For {state.email}</> : 'For your FormPilot account'}>
+      <form noValidate onSubmit={onSubmit} className="space-y-5">
+        {formError && <Alert tone="danger" title="We couldn’t update your password">{formError}</Alert>}
+        {/* Hidden username field: tells password managers which saved login to update. */}
+        <input type="email" name="email" autoComplete="username" value={state.email ?? ''} readOnly hidden />
+        <PasswordField
+          label="New password"
+          name="new-password"
+          autoComplete="new-password"
+          value={values.password}
+          error={errors.password}
+          hint="At least 6 characters, with a letter and a number."
+          onChange={(e) => setValues({ ...values, password: e.target.value })}
+        />
+        <PasswordStrength value={values.password} />
+        <PasswordField
+          label="Confirm new password"
+          name="confirm-password"
+          autoComplete="new-password"
+          value={values.confirm}
+          error={errors.confirm}
+          onChange={(e) => setValues({ ...values, confirm: e.target.value })}
+        />
+        <Button type="submit" size="lg" className="w-full" disabled={submitting}>
+          {submitting ? 'Updating…' : 'Update password'}
+        </Button>
+        <p className="text-center text-[13px] text-subtle">You’ll be signed in here, and signed out on every other device.</p>
       </form>
     </AuthShell>
   )
