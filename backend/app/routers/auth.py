@@ -4,6 +4,7 @@ import hmac
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
+from html import escape
 from urllib.parse import urlencode
 
 import httpx
@@ -118,7 +119,7 @@ def _set_password(db: Session, user: User, password: str) -> None:
 def forgot_password(payload: ForgotPasswordIn, db: Session = Depends(get_db)) -> ForgotPasswordOut:
     """Creates a single-use reset link and emails it. The response is the same whether or not the email exists."""
     settings = get_settings()
-    out = ForgotPasswordOut(expires_minutes=settings.reset_token_minutes)
+    out = ForgotPasswordOut(expires_minutes=settings.reset_token_minutes, email_enabled=email_configured())
     user = db.scalar(select(User).where(User.email == payload.email.lower()))
     if user is None:
         return out
@@ -131,18 +132,40 @@ def forgot_password(payload: ForgotPasswordIn, db: Session = Depends(get_db)) ->
     )
     db.commit()
     link = f"{settings.app_url.rstrip('/')}/reset-password?token={token}"
+    minutes = settings.reset_token_minutes
     sent = send_email(
         user.email,
         "Reset your FormPilot password",
         f"Hi {user.full_name},\n\nUse this link to choose a new password. It works once and expires in "
-        f"{settings.reset_token_minutes} minutes:\n\n{link}\n\nIf you didn't ask for this, you can ignore this email; "
+        f"{minutes} minutes:\n\n{link}\n\nIf you didn't ask for this, you can ignore this email; "
         "your password won't change.\n\nFormPilot",
+        _reset_email_html(user.full_name, link, minutes),
     )
-    if not sent:
-        log.info("Password reset link for %s: %s", user.email, link)
-        if not settings.is_production and not email_configured():
-            out.reset_url = link  # development only: lets the flow be tested without an email server
+    if not sent and not settings.is_production:
+        # Development only: the link never appears in the web page, but a developer can find it here.
+        log.warning("Password reset email not sent (SMTP not configured or failed). Link for %s: %s", user.email, link)
     return out
+
+
+def _reset_email_html(name: str, link: str, minutes: int) -> str:
+    name, link = escape(name), escape(link, quote=True)
+    return f"""<!doctype html>
+<html><body style="margin:0;background:#f6f6fb;font-family:Arial,Helvetica,sans-serif;color:#0e0e62">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border:1px solid #e4e4ef;border-radius:12px;padding:32px">
+        <tr><td>
+          <p style="margin:0 0 24px;font-size:18px;font-weight:bold">FormPilot</p>
+          <h1 style="margin:0 0 12px;font-size:22px">Reset your password</h1>
+          <p style="margin:0 0 24px;font-size:15px;line-height:1.5;color:#3d3d6b">Hi {name}, click the button to choose a new password.
+            The link works once and expires in {minutes} minutes.</p>
+          <a href="{link}" style="display:inline-block;background:#0e0e62;color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;padding:12px 22px;border-radius:8px">Reset password</a>
+          <p style="margin:24px 0 0;font-size:13px;line-height:1.5;color:#6b6b8f">If you didn't ask for this, ignore this email. Your password won't change.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>"""
 
 
 @router.get("/password/reset", response_model=ResetTokenOut)

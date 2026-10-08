@@ -201,7 +201,7 @@ Create a key at [console.groq.com/keys](https://console.groq.com/keys) and set `
 | `SESSION_HOURS` | `12` | Session lifetime without "Remember me" (the cookie also ends when the browser closes). |
 | `REMEMBER_DAYS` | `30` | Session lifetime with "Remember me". |
 | `RESET_TOKEN_MINUTES` | `30` | How long a password reset link works. |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | empty, `587` | Email server for reset links. Without it, links are logged and, outside production, shown on the Forgot Password page. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | empty, `587` | Email server for reset links, which are only ever sent by email. Port 465 uses SSL, other ports STARTTLS. Without it, the Forgot Password page says email isn't set up (in development the link is logged on the server). |
 
 Generate keys:
 

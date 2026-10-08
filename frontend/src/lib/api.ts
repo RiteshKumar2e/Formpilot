@@ -108,7 +108,7 @@ export const api = {
     deleteAccount: () => request<void>('/auth/me', { method: 'DELETE' }),
     providers: () => request<{ google: boolean }>('/auth/providers'),
     forgotPassword: (email: string) =>
-      request<{ ok: boolean; expires_minutes: number; reset_url: string | null }>('/auth/password/forgot', {
+      request<{ ok: boolean; expires_minutes: number; email_enabled: boolean }>('/auth/password/forgot', {
         method: 'POST',
         body: JSON.stringify({ email }),
       }),

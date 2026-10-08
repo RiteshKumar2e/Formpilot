@@ -321,7 +321,7 @@ export function ForgotPasswordPage() {
   const [error, setError] = useState<string | undefined>()
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
-  const [sent, setSent] = useState<{ email: string; minutes: number; devLink: string | null } | null>(null)
+  const [sent, setSent] = useState<{ email: string; minutes: number; emailEnabled: boolean } | null>(null)
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -332,7 +332,7 @@ export function ForgotPasswordPage() {
     setSubmitting(true)
     try {
       const res = await api.auth.forgotPassword(email.trim())
-      setSent({ email: email.trim(), minutes: res.expires_minutes, devLink: res.reset_url })
+      setSent({ email: email.trim(), minutes: res.expires_minutes, emailEnabled: res.email_enabled })
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
     } finally {
@@ -354,17 +354,19 @@ export function ForgotPasswordPage() {
     >
       {sent ? (
         <div className="space-y-5">
-          <Alert tone="success" title="Check your email">
-            If an account exists for {sent.email}, we’ve sent a link to reset your password. It works once and expires in {sent.minutes} minutes.
-          </Alert>
-          {sent.devLink && (
-            <div className="rounded-[var(--radius-control)] border border-dashed border-line-strong bg-canvas p-4 text-[14px]">
-              <p className="font-medium text-ink">Development mode: no email server is configured</p>
-              <p className="mt-1 text-ink-2">Use the link directly. In production it is only sent by email.</p>
-              <Link to={new URL(sent.devLink).pathname + new URL(sent.devLink).search} className="mt-3 inline-block font-medium text-accent underline underline-offset-2">
-                Open reset link
+          {sent.emailEnabled ? (
+            <Alert tone="success" title="Check your email">
+              If an account exists for {sent.email}, we’ve sent it a link to reset your password. Open the link from the email to choose a new
+              password. It works once and expires in {sent.minutes} minutes. Don’t see it? Check your spam folder.
+            </Alert>
+          ) : (
+            <Alert tone="danger" title="Email isn’t set up yet">
+              This FormPilot server can’t send emails yet, so the reset link couldn’t be delivered. Please{' '}
+              <Link to="/contact" className="font-medium underline underline-offset-2">
+                contact support
               </Link>
-            </div>
+              .
+            </Alert>
           )}
           <Button variant="secondary" size="lg" className="w-full" onClick={() => setSent(null)}>
             Send another link

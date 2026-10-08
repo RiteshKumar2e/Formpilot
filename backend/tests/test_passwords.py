@@ -1,6 +1,8 @@
 """Remember me, forgot/reset password and change password."""
 
 import time
+
+import pytest
 from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urlsplit
 
@@ -24,11 +26,28 @@ def cookie_header(res) -> str:
     return res.headers["set-cookie"].lower()
 
 
-def reset_token(client, email: str) -> str:
+@pytest.fixture()
+def outbox(monkeypatch):
+    """Captures emails instead of sending them."""
+    sent: list[dict] = []
+
+    def fake_send(to, subject, text, html=None):
+        sent.append({"to": to, "subject": subject, "text": text, "html": html})
+        return True
+
+    monkeypatch.setattr("app.routers.auth.send_email", fake_send)
+    return sent
+
+
+def reset_token(client, outbox, email: str) -> str:
     res = client.post("/api/auth/password/forgot", json={"email": email})
     assert res.status_code == 200, res.text
-    url = res.json()["reset_url"]
+    assert "reset_url" not in res.json()  # the link only ever goes by email
+    mail = outbox[-1]
+    assert mail["to"] == email
+    url = next(w for w in mail["text"].split() if w.startswith("http"))
     assert url.startswith("http://localhost:5173/reset-password?token=")
+    assert url in mail["html"]
     return parse_qs(urlsplit(url).query)["token"][0]
 
 
@@ -51,16 +70,17 @@ def test_remember_me_controls_session_length(client):
 def test_forgot_password_does_not_reveal_accounts(client):
     res = client.post("/api/auth/password/forgot", json={"email": "nobody-here@example.com"})
     assert res.status_code == 200
-    assert res.json() == {"ok": True, "expires_minutes": get_settings().reset_token_minutes, "reset_url": None}
+    # No SMTP in tests, so the response says email isn't set up; it never says whether the account exists.
+    assert res.json() == {"ok": True, "expires_minutes": get_settings().reset_token_minutes, "email_enabled": False}
 
 
-def test_reset_password_flow(client):
+def test_reset_password_flow(client, outbox):
     signup(client, "reset@example.com")
     other_device = TestClient(app)
     other_device.post("/api/auth/signin", json={"email": "reset@example.com", "password": PASSWORD})
     assert other_device.get("/api/auth/me").status_code == 200
 
-    token = reset_token(client, "reset@example.com")
+    token = reset_token(client, outbox, "reset@example.com")
     with SessionLocal() as db:  # only a hash of the token is stored
         stored = db.scalar(select(PasswordResetToken.token_hash))
     assert token not in str(stored)
@@ -82,9 +102,9 @@ def test_reset_password_flow(client):
     assert client.post("/api/auth/password/reset", json={"token": token, "password": "another33"}).status_code == 400
 
 
-def test_reset_rejects_expired_and_weak(client):
+def test_reset_rejects_expired_and_weak(client, outbox):
     signup(client, "expired@example.com")
-    token = reset_token(client, "expired@example.com")
+    token = reset_token(client, outbox, "expired@example.com")
     assert client.post("/api/auth/password/reset", json={"token": token, "password": "nodigits"}).status_code == 422
 
     with SessionLocal() as db:
@@ -94,11 +114,9 @@ def test_reset_rejects_expired_and_weak(client):
     assert client.post("/api/auth/password/reset", json={"token": token, "password": "goodpass44"}).status_code == 400
 
 
-def test_reset_url_is_never_returned_in_production(client, monkeypatch):
-    signup(client, "prod-reset@example.com")
-    monkeypatch.setattr(get_settings(), "environment", "production")
-    res = client.post("/api/auth/password/forgot", json={"email": "prod-reset@example.com"})
-    assert res.json()["reset_url"] is None
+def test_no_email_for_unknown_accounts(client, outbox):
+    client.post("/api/auth/password/forgot", json={"email": "ghost@example.com"})
+    assert outbox == []
 
 
 # --- Change password -----------------------------------------------------------------------------

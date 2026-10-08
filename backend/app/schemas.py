@@ -57,8 +57,8 @@ class ForgotPasswordIn(BaseModel):
 class ForgotPasswordOut(BaseModel):
     ok: bool = True
     expires_minutes: int
-    # Only outside production, when no email server is configured, so the flow can be tested.
-    reset_url: str | None = None
+    # False when this server has no email (SMTP) configured, so no link can be delivered to anyone.
+    email_enabled: bool = True
 
 
 class ResetTokenOut(BaseModel):
