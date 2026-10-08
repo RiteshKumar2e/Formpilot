@@ -229,3 +229,137 @@ class ContactIn(BaseModel):
     message: str = Field(min_length=10, max_length=5000)
     website: str = Field(default="", max_length=200)  # honeypot
 
+
+
+# --- Common answers & Smart Answers ----------------------------------------------------------
+
+
+class SavedAnswerIn(BaseModel):
+    question: str = Field(min_length=3, max_length=500)
+    answer: str = Field(min_length=1, max_length=5000)
+
+
+class SavedAnswerOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    question: str
+    answer: str
+    use_count: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class SmartAnswerIn(BaseModel):
+    question: str = Field(min_length=3, max_length=500)
+    organization: str | None = Field(default=None, max_length=200)
+    role: str | None = Field(default=None, max_length=200)
+    max_words: int = Field(default=150, ge=30, le=500)
+
+
+class SmartAnswerSourceOut(BaseModel):
+    type: Literal["profile", "document", "saved_answer"]
+    label: str
+    detail: str | None = None
+
+
+class SmartAnswerOut(BaseModel):
+    answer: str
+    method: Literal["llm_rag", "saved_answer", "profile_draft", "none"]
+    sources: list[SmartAnswerSourceOut]
+    # Always a suggestion: the user reads, edits and accepts it.
+    is_suggestion: bool = True
+
+
+# --- Templates -------------------------------------------------------------------------------
+
+
+class TemplateFieldIn(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    label: str = Field(max_length=300)
+    value: str = Field(default="", max_length=5000)
+    section: str | None = Field(default=None, max_length=100)
+    profileKey: str | None = Field(default=None, max_length=64)
+
+
+class TemplateIn(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    application_type: str = Field(default="custom", max_length=20)
+    organization: str | None = Field(default=None, max_length=200)
+    fields: list[TemplateFieldIn] = Field(min_length=1, max_length=200)
+    documents: list[str] = Field(default_factory=list, max_length=50)
+
+
+class TemplateOut(BaseModel):
+    id: str
+    name: str
+    application_type: str
+    organization: str | None
+    fields: list[TemplateFieldIn]
+    documents: list[str]
+    common_answers: list[TemplateFieldIn]
+    completed: int
+    total: int
+    use_count: int
+    created_at: datetime
+
+
+class TemplateMatchIn(BaseModel):
+    labels: list[str] = Field(min_length=1, max_length=200)
+
+
+class TemplateMatchOut(BaseModel):
+    id: str
+    name: str
+    score: float
+    reusable: int
+
+
+# --- Autofill (browser extension API) --------------------------------------------------------
+
+
+class AutofillFieldIn(BaseModel):
+    id: str = Field(min_length=1, max_length=200)
+    label: str = Field(min_length=1, max_length=300)
+    type: str = Field(default="text", max_length=30)
+    required: bool = False
+
+
+class AutofillIn(BaseModel):
+    fields: list[AutofillFieldIn] = Field(min_length=1, max_length=150)
+    page_url: str | None = Field(default=None, max_length=2000)
+    page_title: str | None = Field(default=None, max_length=300)
+    organization: str | None = Field(default=None, max_length=200)
+    role: str | None = Field(default=None, max_length=200)
+
+
+class AutofillSuggestionOut(BaseModel):
+    id: str
+    label: str
+    kind: Literal["value", "answer", "document"]
+    status: Literal["ready", "needs_review", "missing"]
+    value: str | None
+    source: str | None
+    confidence: float
+    verified: bool
+    reasoning: str
+    method: str | None = None
+    document_id: str | None = None
+    sources: list[SmartAnswerSourceOut] = []
+
+
+class AutofillSummaryOut(BaseModel):
+    detected: int
+    ready: int
+    needs_review: int
+    missing: int
+    verified: int
+    confidence: float
+
+
+class AutofillSuggestOut(BaseModel):
+    fields: list[AutofillSuggestionOut]
+    summary: AutofillSummaryOut
+    template: TemplateMatchOut | None
+    workflow_id: str

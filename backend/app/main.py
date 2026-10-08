@@ -7,7 +7,7 @@ from fastapi.responses import RedirectResponse
 from .config import get_settings
 from . import migrations
 from .database import Base, engine
-from .routers import applications, auth, contact, documents, integrations, profile, system
+from .routers import applications, auth, contact, documents, integrations, profile, system, vault
 
 settings = get_settings()
 settings.validate_for_production()
@@ -52,7 +52,9 @@ async def security_headers(request: Request, call_next):
     return response
 
 
-for router in (auth.router, documents.router, profile.router, applications.router, integrations.router, system.router, contact.router):
+for router in (
+    auth.router, documents.router, profile.router, applications.router, vault.router, integrations.router, system.router, contact.router
+):
     app.include_router(router, prefix="/api")
 
 

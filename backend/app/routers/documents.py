@@ -74,6 +74,22 @@ def upload_document(
     return _owned_document(db, user, doc.id)
 
 
+@router.get("/{document_id}/file")
+def download_document(document_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Response:
+    """The original file, decrypted for its owner (used to attach vault documents to external forms)."""
+    doc = _owned_document(db, user, document_id)
+    try:
+        data = storage.load(doc.storage_key)
+    except (OSError, ValueError) as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "This file is no longer available.") from exc
+    safe_name = doc.filename.replace('"', "")
+    return Response(
+        content=data,
+        media_type=doc.content_type,
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}"', "Cache-Control": "private, no-store"},
+    )
+
+
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_document(document_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Response:
     doc = _owned_document(db, user, document_id)

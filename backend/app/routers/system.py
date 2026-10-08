@@ -42,7 +42,7 @@ def list_workflows(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[WorkflowRun]:
-    """Recent workflow runs (document ingestion, form mapping), optionally for one document or application."""
+    """Recent workflow runs (document ingestion, form mapping, external autofill), optionally for one subject."""
     query = select(WorkflowRun).where(WorkflowRun.user_id == user.id)
     if subject_id:
         query = query.where(WorkflowRun.subject_id == subject_id)
