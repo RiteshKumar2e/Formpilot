@@ -4,5 +4,3 @@ dist
 .env.local
 *.log
 
-# Built browser extension (npm run build:extension)
-extension/dist

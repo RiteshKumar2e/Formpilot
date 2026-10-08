@@ -176,10 +176,10 @@ export interface TemplateMatch {
 }
 
 /** Field metadata sent to /api/autofill/suggest; the extension's FieldMeta (extension/src/core/field-detector.ts). */
-export type { FieldMeta as AutofillFieldInput } from '../../extension/src/core/field-detector'
+export type { FieldMeta as AutofillFieldInput } from '../../../extension/src/core/field-detector'
 
 /** One suggestion from /api/autofill/suggest; shared with the browser extension. */
-export type { Suggestion as AutofillSuggestion, SuggestResponse as AutofillResponse } from '../../extension/src/core/types'
+export type { Suggestion as AutofillSuggestion, SuggestResponse as AutofillResponse } from '../../../extension/src/core/types'
 
 export interface ExtensionConnection {
   id: string

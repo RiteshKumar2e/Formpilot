@@ -68,7 +68,7 @@ const STEPS = [
       <>
         Open <code className="rounded bg-sunken px-1.5 py-0.5 font-mono text-[13px]">chrome://extensions</code> (or{' '}
         <code className="rounded bg-sunken px-1.5 py-0.5 font-mono text-[13px]">edge://extensions</code>), turn on Developer mode, choose{' '}
-        <strong>Load unpacked</strong> and select <code className="rounded bg-sunken px-1.5 py-0.5 font-mono text-[13px]">frontend/extension/dist</code>.
+        <strong>Load unpacked</strong> and select <code className="rounded bg-sunken px-1.5 py-0.5 font-mono text-[13px]">extension/dist</code>.
       </>
     ),
   },

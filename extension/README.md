@@ -18,7 +18,7 @@ FormPilot never submits a form.
    cd frontend
    npm run build:extension
    ```
-3. Open `chrome://extensions` (or `edge://extensions`), turn on **Developer mode**, click **Load unpacked** and select `frontend/extension/dist`.
+3. Open `chrome://extensions` (or `edge://extensions`), turn on **Developer mode**, click **Load unpacked** and select `extension/dist`.
 4. In the FormPilot app, open **Browser Extension** (`/extension`) and click **Connect this browser**.
 5. Open any website with a form. A small **FormPilot · N fields** button appears at the bottom right.
 

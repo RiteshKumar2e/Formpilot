@@ -54,7 +54,7 @@ Students, job seekers and professionals type the same facts into portal after po
 | --- | --- |
 | **Master Profile** | Personal and contact details, education, work experience, skills, projects, achievements, certifications, professional links and addresses. Every value shows its source documents, verification status (confirmed by you, found in several documents, or read with high confidence), last-updated date and confidence. |
 | **Application Vault** | Master Profile, documents, saved applications, application templates and common answers in one place. |
-| **Use FormPilot anywhere** | A Chrome/Edge extension (Manifest V3) that fills forms on **any** website from your profile, with no site-specific code: it detects the fields, FormPilot works out what each one means, you review the matches with their confidence, then click Autofill. Handles dropdowns and radio buttons, date formats, uploads from your vault, forms that load later and multi-step forms. Never submits. The in-app CareerHub demo runs the same code. See [`frontend/extension/README.md`](frontend/extension/README.md). |
+| **Use FormPilot anywhere** | A Chrome/Edge extension (Manifest V3) that fills forms on **any** website from your profile, with no site-specific code: it detects the fields, FormPilot works out what each one means, you review the matches with their confidence, then click Autofill. Handles dropdowns and radio buttons, date formats, uploads from your vault, forms that load later and multi-step forms. Never submits. The in-app CareerHub demo runs the same code. See [`extension/README.md`](extension/README.md). |
 | **Smart Answers** | Suggested answers to open questions ("Why do you want to join us?") drafted from your profile, documents and saved answers, with the sources shown. Always a suggestion: Use, Edit or Regenerate. |
 | **Templates** | Save a completed application as a template. When a similar form appears, FormPilot offers to reuse its answers; reused values are marked for review. |
 | **Document extraction** | Reads PDFs (and scanned images when OCR is enabled). Pattern rules and an LLM on Groq extract name, contact details, date of birth, degree, institution, graduation year, experience, skills and profile links, each with a confidence score. Every LLM value must appear in the document or it is discarded. |
@@ -152,10 +152,10 @@ Open http://localhost:5173, create an account, and upload a resume or certificat
 
 ```bash
 cd frontend
-npm run build:extension             # builds frontend/extension/dist
+npm run build:extension             # builds extension/dist
 ```
 
-Load `frontend/extension/dist` in `chrome://extensions` or `edge://extensions` (Developer mode → Load unpacked), then open **Browser Extension** in the app and click **Connect this browser**. Details: [`frontend/extension/README.md`](frontend/extension/README.md).
+Load `extension/dist` in `chrome://extensions` or `edge://extensions` (Developer mode → Load unpacked), then open **Browser Extension** in the app and click **Connect this browser**. Details: [`extension/README.md`](extension/README.md).
 
 > **Windows tip:** `WinError 10013` when starting uvicorn means port 8000 is already in use. Stop the other process, or use `--port 8001` and update the proxy target in `frontend/vite.config.ts`.
 
@@ -340,9 +340,9 @@ Formpilot/
 │   ├── eval/                    # Labelled forms and documents, accuracy script
 │   ├── tests/                   # pytest suite
 │   └── requirements.txt
+├── extension/                   # Chrome/Edge extension (Manifest V3): field detector, autofill engine,
+│                                # API client, service worker, popup; build → extension/dist
 └── frontend/
-    ├── extension/               # Chrome/Edge extension (Manifest V3): field detector, autofill engine,
-    │                            # API client, service worker, popup; npm run build:extension → extension/dist
     ├── public/                  # Favicon, fonts, screenshots, robots.txt, sitemap.xml
     └── src/
         ├── components/          # Layouts, landing sections, UI primitives

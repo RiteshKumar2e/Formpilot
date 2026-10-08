@@ -6,6 +6,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     port: 5173,
+    // The Use Anywhere demo imports the browser extension's core from ../extension.
+    fs: { allow: ['.', '../extension'] },
     // Proxy API calls to the FastAPI backend during development.
     proxy: {
       '/api': {
