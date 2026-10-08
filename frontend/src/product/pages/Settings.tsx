@@ -226,9 +226,10 @@ export function SettingsPage() {
     setDeleteError(null)
     try {
       await api.auth.deleteAccount()
+      // Leave the app first; clearing the user while still inside it would redirect to /login.
+      navigate('/', { replace: true })
       setUser(null)
       close()
-      navigate('/')
     } catch (err) {
       setDeleteError(err instanceof ApiError ? err.message : 'Couldn’t delete your account. Please try again.')
     }

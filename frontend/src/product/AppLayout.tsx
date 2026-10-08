@@ -107,9 +107,10 @@ function SidebarContent({ onNavigate, onHelp }: { onNavigate?: () => void; onHel
             <button
               type="button"
               onClick={async () => {
+                // Leave the app first; clearing the user while still inside it would redirect to /login.
+                navigate('/', { replace: true })
                 await signOut()
                 close()
-                navigate('/')
               }}
               className="inline-flex size-8 items-center justify-center rounded-[var(--radius-control)] text-subtle hover:bg-sunken hover:text-ink"
               aria-label="Sign out"
