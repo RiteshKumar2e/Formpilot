@@ -115,7 +115,7 @@ export const api = {
     checkResetToken: (token: string) =>
       request<{ valid: boolean; email: string | null }>(`/auth/password/reset?token=${encodeURIComponent(token)}`),
     resetPassword: (token: string, password: string) =>
-      request<User>('/auth/password/reset', { method: 'POST', body: JSON.stringify({ token, password }) }),
+      request<{ valid: boolean; email: string | null }>('/auth/password/reset', { method: 'POST', body: JSON.stringify({ token, password }) }),
     changePassword: (currentPassword: string, newPassword: string) =>
       request<void>('/auth/password/change', {
         method: 'POST',

@@ -8,7 +8,7 @@ import { usePageMeta } from '../hooks/usePageMeta'
 import { Alert, PasswordField, TextField } from '../components/ui/FormControls'
 import { Button } from '../components/ui/Button'
 import { LogoMark } from '../components/ui/Logo'
-import { CheckCircle2, ShieldCheck } from 'lucide-react'
+import { ShieldCheck } from 'lucide-react'
 import { Honeypot } from '../components/ui/Honeypot'
 import { useWorkspace } from '../product/workspace'
 
@@ -231,7 +231,8 @@ export function SignInPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const next = params.get('next')?.startsWith('/') ? params.get('next')! : '/dashboard'
-  const [values, setValues] = useState({ email: '', password: '' })
+  const passwordReset = params.get('reset') === '1'
+  const [values, setValues] = useState({ email: params.get('email') ?? '', password: '' })
   const [remember, setRemember] = useState(true)
   const [errors, setErrors] = useState<Record<string, string | undefined>>({})
   const [submitting, setSubmitting] = useState(false)
@@ -276,6 +277,11 @@ export function SignInPage() {
     >
       <GoogleSignIn />
       <form noValidate onSubmit={onSubmit} className="space-y-5">
+        {passwordReset && !formError && (
+          <Alert tone="success" title="Password updated">
+            Sign in with your new password to continue. You’ve been signed out on every other device.
+          </Alert>
+        )}
         {formError && <Alert tone="danger" title="Sign in failed">{formError}</Alert>}
         <TextField
           label="Email"
@@ -423,7 +429,8 @@ export function ResetPasswordPage() {
   const [params] = useSearchParams()
   const token = params.get('token') ?? ''
   const { setUser } = useAuth()
-  const [state, setState] = useState<{ status: 'checking' | 'invalid' | 'valid' | 'done'; email: string | null }>({ status: 'checking', email: null })
+  const navigate = useNavigate()
+  const [state, setState] = useState<{ status: 'checking' | 'invalid' | 'valid'; email: string | null }>({ status: 'checking', email: null })
   const [values, setValues] = useState({ password: '', confirm: '' })
   const [errors, setErrors] = useState<Record<string, string | undefined>>({})
   const [submitting, setSubmitting] = useState(false)
@@ -452,11 +459,13 @@ export function ResetPasswordPage() {
     if (next.password || next.confirm) return
     setSubmitting(true)
     try {
-      const user = await api.auth.resetPassword(token, values.password)
+      const res = await api.auth.resetPassword(token, values.password)
+      const email = res.email ?? state.email ?? ''
       // Lets the browser's password manager update the saved password for this account.
-      void savePasswordCredential(user.email, values.password, user.full_name)
-      setUser(user)
-      setState({ status: 'done', email: user.email })
+      void savePasswordCredential(email, values.password)
+      // Resetting doesn't sign anyone in: the person signs in with the new password.
+      setUser(null)
+      navigate(`/login?reset=1&email=${encodeURIComponent(email)}`, { replace: true })
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
     } finally {
@@ -478,24 +487,6 @@ export function ResetPasswordPage() {
         <Button to="/forgot-password" size="lg" className="w-full">
           Request a new link
         </Button>
-      </StandaloneShell>
-    )
-  }
-
-  if (state.status === 'done') {
-    return (
-      <StandaloneShell title="Password updated">
-        <div className="space-y-5">
-          <p className="flex items-start gap-2.5 text-[15px] text-ink-2" role="status">
-            <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success" aria-hidden />
-            <span>
-              The password for {state.email} has been changed. You’ve been signed out on every other device. You can close this tab.
-            </span>
-          </p>
-          <Button to="/dashboard" size="lg" variant="secondary" className="w-full">
-            Continue to FormPilot
-          </Button>
-        </div>
       </StandaloneShell>
     )
   }

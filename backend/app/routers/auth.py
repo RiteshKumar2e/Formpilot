@@ -149,8 +149,9 @@ def check_reset_token(token: str, db: Session = Depends(get_db)) -> ResetTokenOu
     return ResetTokenOut(valid=user is not None, email=user.email if user else None)
 
 
-@router.post("/password/reset", response_model=UserOut, dependencies=[Depends(reset_password_limit)])
-def reset_password(payload: ResetPasswordIn, response: Response, db: Session = Depends(get_db)) -> User:
+@router.post("/password/reset", response_model=ResetTokenOut, dependencies=[Depends(reset_password_limit)])
+def reset_password(payload: ResetPasswordIn, response: Response, db: Session = Depends(get_db)) -> ResetTokenOut:
+    """Sets the new password. Nobody is signed in: the person signs in again with the new password."""
     row = _usable_token(db, payload.token)
     user = db.get(User, row.user_id) if row else None
     if user is None:
@@ -160,8 +161,8 @@ def reset_password(payload: ResetPasswordIn, response: Response, db: Session = D
     for other in db.scalars(select(PasswordResetToken).where(PasswordResetToken.user_id == user.id, PasswordResetToken.used_at.is_(None))):
         other.used_at = _now()
     db.commit()
-    _set_session(response, user)
-    return user
+    response.delete_cookie(SESSION_COOKIE, path="/")
+    return ResetTokenOut(valid=True, email=user.email)
 
 
 @router.post("/password/change", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(signin_limit)])

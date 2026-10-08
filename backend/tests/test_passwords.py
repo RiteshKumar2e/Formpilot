@@ -89,8 +89,8 @@ def test_reset_password_flow(client, outbox):
     time.sleep(1.1)  # sessions are compared to the password change at one-second resolution
     client.cookies.clear()
     res = client.post("/api/auth/password/reset", json={"token": token, "password": "brandnew22"})
-    assert res.status_code == 200 and res.json()["email"] == "reset@example.com"
-    assert client.get("/api/auth/me").status_code == 200  # signed in with the new password
+    assert res.status_code == 200 and res.json() == {"valid": True, "email": "reset@example.com"}
+    assert client.get("/api/auth/me").status_code == 401  # not signed in: the person signs in with the new password
 
     # The old password no longer works, the new one does, and the other device was signed out.
     assert client.post("/api/auth/signin", json={"email": "reset@example.com", "password": PASSWORD}).status_code == 401
