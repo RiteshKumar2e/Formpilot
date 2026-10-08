@@ -152,12 +152,9 @@ export function UseAnywhere() {
               review, not chosen automatically.
             </p>
             <div className="mt-6">
-              <div className="flex flex-wrap gap-3">
-                <Button to="/extension">Get the extension</Button>
-                <Button to="/anywhere" variant="secondary">
-                  Try the live demo
-                </Button>
-              </div>
+              <Button to="/signup" variant="highlight" size="lg">
+                Get Started
+              </Button>
             </div>
           </div>
           <ExtensionMockup />

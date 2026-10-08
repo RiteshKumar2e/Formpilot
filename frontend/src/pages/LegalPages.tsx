@@ -45,7 +45,13 @@ export function PrivacyPage() {
         <ul>
           <li>Account details: your name, email address and a hashed password.</li>
           <li>Documents you upload, and the details FormPilot extracts from them.</li>
+          <li>Details you add or confirm in your Master Profile, your saved applications, templates and common answers.</li>
           <li>Choices you make in FormPilot, such as which value to keep when two documents disagree.</li>
+          <li>
+            If you use the browser extension: when you open FormPilot on a website, the labels, names, types and options of
+            that page’s form fields and the website’s address (domain only). Never the page’s other text or anything already
+            typed into it.
+          </li>
           <li>Messages you send through the contact form: your name, email address and message.</li>
           <li>Server logs that include IP addresses, used to apply rate limits and keep the service running.</li>
         </ul>
@@ -54,14 +60,34 @@ export function PrivacyPage() {
         <h2>How we use it</h2>
         <p>
           Your documents and profile are used to show you your profile and to answer the form fields you ask FormPilot to fill.
-          Contact messages are used to reply to you. We do not sell your data.
+          Contact messages are used to reply to you. Your email address is used for account emails such as password reset
+          links. We do not sell your data and do not use it to train AI models.
         </p>
+      </section>
+      <section>
+        <h2>Service providers</h2>
+        <ul>
+          <li>
+            <strong>Groq</strong> (AI processing), when enabled: the text of a document you upload, the form fields you ask
+            FormPilot to fill and the relevant parts of your profile are sent to Groq to extract details and suggest answers.
+          </li>
+          <li>
+            <strong>Turso</strong> (database): stores your account, profile and the encrypted details described below.
+          </li>
+          <li>
+            <strong>Email provider</strong> (<Todo>for example Google Gmail</Todo>): delivers password reset emails.
+          </li>
+          <li>
+            <strong>Hosting</strong>: <Todo>hosting provider and region</Todo>.
+          </li>
+        </ul>
+        <p>Text embeddings used for matching are computed on FormPilot’s own server.</p>
       </section>
       <section>
         <h2>Where it is stored</h2>
         <p>
-          Uploaded files are encrypted before they are written to disk. Account and profile data is stored in a database
-          hosted by <Todo>hosting provider and region</Todo>.
+          Uploaded files are encrypted before they are written to disk. Extracted details, applications, templates and saved
+          answers are encrypted before they are written to the database. Passwords are stored only as scrypt hashes.
         </p>
       </section>
       <section>
@@ -74,15 +100,18 @@ export function PrivacyPage() {
       <section>
         <h2>Your choices</h2>
         <p>
-          You can delete any document from your workspace, which also removes the details extracted from it. You can delete
-          your account from your workspace, which permanently removes your profile, documents and extracted data.
+          You can delete any document from your workspace, which also removes the details extracted from it. You can disconnect
+          the browser extension at any time from the Browser Extension page. You can delete your account from your workspace,
+          which permanently removes your profile, documents and extracted data.
         </p>
       </section>
       <section>
         <h2>Cookies and analytics</h2>
         <p>
           FormPilot sets one essential cookie, <code className="font-mono text-[14px]">fp_session</code>, to keep you signed
-          in. It is httpOnly and expires after 12 hours. Your cookie choice is remembered in your browser’s local storage.
+          in. It is httpOnly. It ends when you close your browser, or after 30 days if you choose “Remember me”. Your cookie
+          choice is remembered in your browser’s local storage. The browser extension keeps its connection token in the
+          extension’s own storage; disconnecting or changing your password ends it.
         </p>
         <p>
           If analytics is enabled on this site and you accept it, page visits are counted with Plausible, which does not use
@@ -106,15 +135,16 @@ export function TermsPage() {
       <section>
         <h2>The service</h2>
         <p>
-          FormPilot extracts details from documents you upload, keeps them in a profile, and suggests answers for form fields.
-          FormPilot does not submit forms on your behalf.
+          FormPilot extracts details from documents you upload, keeps them in a profile, and suggests answers for form fields,
+          in FormPilot and, through the browser extension, on other websites. FormPilot does not submit forms on your behalf.
         </p>
       </section>
       <section>
         <h2>Your responsibility for answers</h2>
         <p>
-          Extracted details and suggested answers can be wrong. Each one shows its source and a confidence score so you can
-          check it. You are responsible for reviewing any answer before you use it in an application.
+          Extracted details and suggested answers can be wrong, including answers written by AI. Each one shows its source and a
+          confidence score so you can check it. You are responsible for reviewing every value FormPilot fills, on any website,
+          before you submit.
         </p>
       </section>
       <section>
@@ -131,6 +161,7 @@ export function TermsPage() {
           <li>Upload only documents that belong to you or that you are authorized to use.</li>
           <li>Do not use FormPilot to prepare false or misleading applications.</li>
           <li>Do not try to access other users’ data or disrupt the service.</li>
+          <li>Follow the rules of the websites where you use the browser extension.</li>
         </ul>
       </section>
       <section>

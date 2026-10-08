@@ -1,12 +1,17 @@
 User-agent: *
 Allow: /
 Disallow: /dashboard
+Disallow: /vault
 Disallow: /profile
 Disallow: /documents
 Disallow: /applications
 Disallow: /mapping
 Disallow: /validation
+Disallow: /anywhere
+Disallow: /extension
 Disallow: /activity
 Disallow: /settings
+Disallow: /reset-password
+Disallow: /api/
 
 Sitemap: https://formpilot.app/sitemap.xml

@@ -64,7 +64,10 @@ export function ProductPreview() {
             <div className="rounded-[12px] bg-band p-2 sm:p-3">
               <div className="overflow-hidden rounded-[var(--radius-panel)] border border-line bg-surface shadow-[var(--shadow-panel)]">
                 <picture>
+                  {/* WebP is about half the size; the JPEGs are the fallback for older browsers. */}
+                  <source media="(max-width: 640px)" type="image/webp" srcSet={current.mobile.replace('.jpg', '.webp')} width={780} height={1560} />
                   <source media="(max-width: 640px)" srcSet={current.mobile} width={780} height={1560} />
+                  <source type="image/webp" srcSet={current.src.replace('.jpg', '.webp')} />
                   <img src={current.src} width={current.size[0]} height={current.size[1]} loading="lazy" decoding="async" alt={current.alt} className="block h-auto w-full" />
                 </picture>
               </div>

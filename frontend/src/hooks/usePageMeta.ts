@@ -3,13 +3,25 @@ import { useEffect } from 'react'
 export const SITE_URL = 'https://formpilot.app'
 const DEFAULT_TITLE = 'FormPilot — One Profile. Every Application.'
 const DEFAULT_DESCRIPTION =
-  'FormPilot intelligently extracts, maps and validates your information across applications, helping you complete forms faster with human-reviewed automation.'
+  'Your reusable application profile for the web. Build it once, verify it once, and fill forms on any website, with your review before anything is filled.'
 
-/** Sets the document title, description and canonical URL for the current route. */
+function setMeta(selector: string, value: string) {
+  document.querySelector(selector)?.setAttribute('content', value)
+}
+
+/** Sets the title, description, canonical URL and social preview text for the current route. */
 export function usePageMeta({ title, description, path }: { title?: string; description?: string; path: string }) {
   useEffect(() => {
-    document.title = title ? `${title} · FormPilot` : DEFAULT_TITLE
-    document.querySelector('meta[name="description"]')?.setAttribute('content', description ?? DEFAULT_DESCRIPTION)
-    document.querySelector('link[rel="canonical"]')?.setAttribute('href', `${SITE_URL}${path}`)
+    const fullTitle = title ? `${title} · FormPilot` : DEFAULT_TITLE
+    const text = description ?? DEFAULT_DESCRIPTION
+    const url = `${SITE_URL}${path}`
+    document.title = fullTitle
+    setMeta('meta[name="description"]', text)
+    setMeta('meta[property="og:title"]', fullTitle)
+    setMeta('meta[property="og:description"]', text)
+    setMeta('meta[property="og:url"]', url)
+    setMeta('meta[name="twitter:title"]', fullTitle)
+    setMeta('meta[name="twitter:description"]', text)
+    document.querySelector('link[rel="canonical"]')?.setAttribute('href', url)
   }, [title, description, path])
 }
