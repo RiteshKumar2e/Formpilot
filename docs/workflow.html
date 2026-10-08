@@ -92,19 +92,28 @@
     <p>The React app only ever calls the FastAPI backend. The backend owns every outside connection, so keys and passwords never reach the browser.</p>
     <figure>
       <div class="scroll">
-        <svg viewBox="0 0 960 400" role="img" aria-label="The web app calls the FastAPI backend over /api with a session cookie; the backend talks to Turso, encrypted file storage, Groq, Gmail SMTP and your webhooks.">
+        <svg viewBox="0 0 960 400" role="img" aria-label="The web app calls the FastAPI backend with a session cookie and the browser extension calls it with a scoped token; the backend talks to Turso, encrypted file storage, Groq, Gmail SMTP and your webhooks.">
           <defs>
             <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="head"/></marker>
           </defs>
-          <g class="n k"><rect x="20" y="150" width="190" height="96" rx="10"/></g>
-          <text class="t" x="115" y="183" text-anchor="middle">Web app</text>
-          <text class="s" x="115" y="202" text-anchor="middle">React · Vite · :5173</text>
-          <text class="s" x="115" y="220" text-anchor="middle">CareerHub demo +</text>
-          <text class="s" x="115" y="235" text-anchor="middle">extension code</text>
+          <g class="n k"><rect x="20" y="70" width="190" height="90" rx="10"/></g>
+          <text class="t" x="115" y="103" text-anchor="middle">Web app</text>
+          <text class="s" x="115" y="122" text-anchor="middle">React · Vite · :5173</text>
+          <text class="s" x="115" y="139" text-anchor="middle">profile, vault, demo</text>
 
-          <line class="a" x1="210" y1="198" x2="296" y2="198" marker-end="url(#ar1)" marker-start="url(#ar1)"/>
-          <text class="lab" x="253" y="189" text-anchor="middle">/api</text>
-          <text class="lab" x="253" y="216" text-anchor="middle">session cookie</text>
+          <line class="a" x1="210" y1="115" x2="296" y2="115" marker-end="url(#ar1)" marker-start="url(#ar1)"/>
+          <text class="lab" x="253" y="106" text-anchor="middle">/api</text>
+          <text class="lab" x="253" y="133" text-anchor="middle">session cookie</text>
+
+          <g class="n k"><rect x="20" y="230" width="190" height="96" rx="10"/></g>
+          <text class="t" x="115" y="262" text-anchor="middle">Browser extension</text>
+          <text class="s" x="115" y="281" text-anchor="middle">Chrome / Edge · MV3</text>
+          <text class="s" x="115" y="298" text-anchor="middle">on any website</text>
+          <text class="mono" x="115" y="315" text-anchor="middle">frontend/extension</text>
+
+          <line class="a" x1="210" y1="278" x2="296" y2="278" marker-end="url(#ar1)" marker-start="url(#ar1)"/>
+          <text class="lab" x="253" y="269" text-anchor="middle">/api</text>
+          <text class="lab" x="253" y="296" text-anchor="middle">scoped token</text>
 
           <g class="n"><rect x="300" y="20" width="230" height="362" rx="12"/></g>
           <text class="t" x="415" y="47" text-anchor="middle">FastAPI backend</text>
@@ -113,7 +122,7 @@
           <text class="mono" x="318" y="118">documents → ingestion</text>
           <text class="mono" x="318" y="140">profile · RAG mapping</text>
           <text class="mono" x="318" y="162">applications · templates</text>
-          <text class="mono" x="318" y="184">answers · autofill API</text>
+          <text class="mono" x="318" y="184">autofill API · extension</text>
           <text class="mono" x="318" y="206">webhooks · capabilities</text>
           <g class="n"><rect x="316" y="228" width="198" height="56" rx="8"/></g>
           <text class="t" x="415" y="252" text-anchor="middle">Workflow engine</text>
@@ -151,7 +160,7 @@
           <text class="lab" x="588" y="338" text-anchor="middle">HMAC-signed POST</text>
         </svg>
       </div>
-      <figcaption>Without a Groq key FormPilot still works: pattern rules and local embeddings take over. Without Turso settings it uses a local libSQL file with the same vector search.</figcaption>
+      <figcaption>The extension never holds a password or API key: the web app gives it a token that only reaches autofill, the profile, documents and Smart Answers, and stops working when you disconnect or change your password. Without a Groq key FormPilot still works: pattern rules and local embeddings take over. Without Turso settings it uses a local libSQL file with the same vector search.</figcaption>
     </figure>
   </section>
 
@@ -175,8 +184,8 @@
           <text class="t" x="600" y="60" text-anchor="middle">Master Profile</text>
           <text class="s" x="600" y="79" text-anchor="middle">you settle conflicts</text>
           <g class="n"><rect x="740" y="30" width="200" height="70" rx="10"/></g>
-          <text class="t" x="840" y="60" text-anchor="middle">Start an application</text>
-          <text class="s" x="840" y="79" text-anchor="middle">field list · template · any site</text>
+          <text class="t" x="840" y="60" text-anchor="middle">Open any form</text>
+          <text class="s" x="840" y="79" text-anchor="middle">in FormPilot or on any website</text>
 
           <line class="a" x1="220" y1="65" x2="256" y2="65" marker-end="url(#ar2)"/>
           <line class="a" x1="460" y1="65" x2="496" y2="65" marker-end="url(#ar2)"/>
@@ -326,21 +335,21 @@
 
   <!-- 5. Use anywhere -->
   <section aria-labelledby="h-anywhere">
-    <h2 id="h-anywhere">5. Using FormPilot on another website</h2>
-    <p>The Use Anywhere demo runs the extension code on CareerHub, a simulated job portal, against the real API. Only you can fill uncertain fields, and only you press Submit.</p>
+    <h2 id="h-anywhere">5. Filling a form on any website</h2>
+    <p>The Chrome/Edge extension works from what each field means, not from site-specific code. It sends only field metadata, fills only what you approve, and never presses Submit. The in-app CareerHub demo runs the same code.</p>
     <figure>
       <div class="scroll">
-        <svg viewBox="0 0 960 440" role="img" aria-label="The extension detects fields on the page, sends them to the FormPilot API, receives suggestions with statuses, shows them to you; you choose what to fill, the extension fills only those fields, and you submit the form yourself.">
+        <svg viewBox="0 0 960 440" role="img" aria-label="The extension detects fields on any website, sends their metadata with its token to the FormPilot API, which matches them with your profile; you review and click Autofill, the extension fills only those fields, and you submit the form yourself.">
           <defs>
             <marker id="ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="head"/></marker>
             <marker id="ar5y" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="head you"/></marker>
           </defs>
           <g class="n k"><rect x="20" y="10" width="180" height="44" rx="8"/></g>
-          <text class="t" x="110" y="29" text-anchor="middle">CareerHub page</text>
-          <text class="s" x="110" y="45" text-anchor="middle">an external website</text>
+          <text class="t" x="110" y="29" text-anchor="middle">Any website</text>
+          <text class="s" x="110" y="45" text-anchor="middle">never seen before</text>
           <g class="n"><rect x="270" y="10" width="180" height="44" rx="8"/></g>
           <text class="t" x="360" y="29" text-anchor="middle">FormPilot extension</text>
-          <text class="mono" x="360" y="45" text-anchor="middle">dom.ts + panel</text>
+          <text class="mono" x="360" y="45" text-anchor="middle">detector · engine · panel</text>
           <g class="n"><rect x="520" y="10" width="180" height="44" rx="8"/></g>
           <text class="t" x="610" y="29" text-anchor="middle">FormPilot API</text>
           <text class="mono" x="610" y="45" text-anchor="middle">/api/autofill/suggest</text>
@@ -354,24 +363,24 @@
           <line class="life" x1="850" y1="54" x2="850" y2="430"/>
 
           <line class="a" x1="110" y1="90" x2="356" y2="90" marker-end="url(#ar5)"/>
-          <text class="lab" x="235" y="83" text-anchor="middle">12 fields found in the page</text>
+          <text class="lab" x="235" y="83" text-anchor="middle">fields found (MutationObserver)</text>
           <line class="a" x1="360" y1="135" x2="606" y2="135" marker-end="url(#ar5)"/>
-          <text class="lab" x="485" y="128" text-anchor="middle">labels + input types</text>
+          <text class="lab" x="485" y="128" text-anchor="middle">field metadata + token</text>
           <path class="a" d="M610 165 H660 V197 H614" marker-end="url(#ar5)"/>
-          <text class="lab" x="668" y="186">map · answer · resume · template</text>
+          <text class="lab" x="668" y="186">meaning · options · dates</text>
           <line class="a" x1="610" y1="235" x2="364" y2="235" marker-end="url(#ar5)"/>
-          <text class="lab" x="485" y="228" text-anchor="middle">ready · needs review · missing</text>
+          <text class="lab" x="485" y="228" text-anchor="middle">value + confidence + status</text>
           <line class="a" x1="360" y1="280" x2="846" y2="280" marker-end="url(#ar5)"/>
-          <text class="lab" x="605" y="273" text-anchor="middle">panel: values, sources, confidence</text>
+          <text class="lab" x="605" y="273" text-anchor="middle">panel: sensitive fields unticked</text>
           <line class="a you" x1="850" y1="325" x2="364" y2="325" marker-end="url(#ar5y)"/>
-          <text class="lab you" x="605" y="318" text-anchor="middle">Fill with FormPilot · Use this value</text>
+          <text class="lab you" x="605" y="318" text-anchor="middle">Autofill · Use · Choose another</text>
           <line class="a" x1="360" y1="370" x2="114" y2="370" marker-end="url(#ar5)"/>
-          <text class="lab" x="235" y="363" text-anchor="middle">fills approved fields only</text>
+          <text class="lab" x="235" y="363" text-anchor="middle">native setter + input/change</text>
           <line class="a you" x1="850" y1="415" x2="114" y2="415" marker-end="url(#ar5y)"/>
           <text class="lab you" x="480" y="408" text-anchor="middle">you press Submit; FormPilot never does</text>
         </svg>
       </div>
-      <figcaption>On the CareerHub test with a Groq key: 12 fields detected, 11 ready, 1 to review (the AI-drafted “Why do you want to join us?”). The resume upload is attached from your vault.</figcaption>
+      <figcaption>Tested on a scholarship form FormPilot had never seen: 12 fields detected, 8 filled confidently (“Name of the student”, “Contact no.”, “Institute name”, “Sex” → M, CGPA). Date of birth waited for confirmation, the “Name” under “Parent / guardian” stayed empty, and the essay question got a suggested answer to review.</figcaption>
     </figure>
   </section>
 
@@ -431,11 +440,12 @@
       <div class="note"><h3>Encrypted at rest</h3><p>Files, extracted values, passages, applications, templates and saved answers are encrypted before they are stored. Vectors stay readable so the database can search them.</p></div>
       <div class="note"><h3>AI is checked</h3><p>LLM output must be found in your documents or profile. Smart Answers are always suggestions, and conflicting values are never filled for you.</p></div>
       <div class="note"><h3>Sessions</h3><p>httpOnly cookie, scrypt-hashed passwords, Remember me for 30 days, and a password change signs out every other device.</p></div>
+      <div class="note"><h3>Extension stays in its lane</h3><p>A token only for autofill, profile, documents and Smart Answers. Sends field labels and options, never page text or what you typed. Your own name never goes into “Father’s Name”.</p></div>
       <div class="note"><h3>Nothing is submitted for you</h3><p>Approval marks an application ready. On other websites the extension fills only what you approve, and you press Submit.</p></div>
     </div>
   </section>
 
-  <footer>Reflects the FormPilot code as of 8 October 2026: FastAPI backend, React frontend, Turso/libSQL, Groq, local fastembed embeddings, Gmail SMTP.</footer>
+  <footer>Reflects the FormPilot code as of 8 October 2026: FastAPI backend, React frontend, Chrome/Edge extension, Turso/libSQL, Groq, local fastembed embeddings, Gmail SMTP.</footer>
 </div>
 </body>
 </html>
