@@ -10,6 +10,7 @@ from sqlalchemy.engine import Engine
 
 ADDED_COLUMNS: dict[str, dict[str, str]] = {
     "profile_choices": {"updated_at": "DATETIME"},
+    "users": {"password_changed_at": "DATETIME"},
 }
 
 

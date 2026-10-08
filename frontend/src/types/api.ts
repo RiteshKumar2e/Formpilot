@@ -214,6 +214,8 @@ export interface SignUpPayload {
 export interface SignInPayload {
   email: string
   password: string
+  /** Stay signed in for 30 days instead of until the browser closes. */
+  remember?: boolean
 }
 
 export interface ContactPayload {

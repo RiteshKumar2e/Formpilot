@@ -25,16 +25,32 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
     # Empty for accounts created through an OAuth provider; password sign-in is then refused.
     password_hash: Mapped[str] = mapped_column(String(255))
+    # Sessions issued before this moment are no longer accepted (set when the password changes).
+    password_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     documents: Mapped[list["Document"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     choices: Mapped[list["ProfileChoice"]] = relationship(cascade="all, delete-orphan")
     oauth_accounts: Mapped[list["OAuthAccount"]] = relationship(cascade="all, delete-orphan")
     applications: Mapped[list["Application"]] = relationship(cascade="all, delete-orphan")
+    reset_tokens: Mapped[list["PasswordResetToken"]] = relationship(cascade="all, delete-orphan")
     webhooks: Mapped[list["Webhook"]] = relationship(cascade="all, delete-orphan")
     workflow_runs: Mapped[list["WorkflowRun"]] = relationship(cascade="all, delete-orphan")
     saved_answers: Mapped[list["SavedAnswer"]] = relationship(cascade="all, delete-orphan")
     templates: Mapped[list["ApplicationTemplate"]] = relationship(cascade="all, delete-orphan")
+
+
+class PasswordResetToken(Base):
+    """A single-use password reset link. Only the SHA-256 of the token is stored."""
+
+    __tablename__ = "password_reset_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
 class OAuthAccount(Base):

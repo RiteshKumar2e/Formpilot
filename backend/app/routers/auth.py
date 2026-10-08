@@ -16,11 +16,29 @@ from sqlalchemy.orm import Session
 from ..config import get_settings
 from ..database import get_db
 from ..deps import get_current_user, get_optional_user
-from ..models import OAuthAccount, User
-from ..ratelimit import signin_limit, signup_limit
-from ..schemas import SessionOut, SignInIn, SignUpIn, UserOut
+from ..models import OAuthAccount, PasswordResetToken, User
+from ..ratelimit import forgot_password_limit, reset_password_limit, signin_limit, signup_limit
+from ..schemas import (
+    ChangePasswordIn,
+    ForgotPasswordIn,
+    ForgotPasswordOut,
+    ResetPasswordIn,
+    ResetTokenOut,
+    SessionOut,
+    SignInIn,
+    SignUpIn,
+    UserOut,
+)
 from ..services import storage
-from ..security import SESSION_COOKIE, create_session_token, hash_password, verify_password
+from ..services.mailer import email_configured, send_email
+from ..security import (
+    SESSION_COOKIE,
+    create_session_token,
+    hash_password,
+    hash_reset_token,
+    new_reset_token,
+    verify_password,
+)
 
 log = logging.getLogger(__name__)
 
@@ -30,12 +48,18 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 _DUMMY_HASH = hash_password("timing-equalizer-0")
 
 
-def _set_session(response: Response, user: User) -> None:
+def _set_session(response: Response, user: User, remember: bool | None = None) -> None:
+    """Starts a session.
+
+    remember=True keeps it for REMEMBER_DAYS; remember=False makes it a browser-session cookie that ends
+    when the browser closes (and expires after SESSION_HOURS at the latest); None uses SESSION_HOURS.
+    """
     settings = get_settings()
+    hours = settings.remember_days * 24 if remember else settings.session_hours
     response.set_cookie(
         SESSION_COOKIE,
-        create_session_token(user.id),
-        max_age=settings.session_hours * 3600,
+        create_session_token(user.id, hours),
+        max_age=None if remember is False else hours * 3600,
         httponly=True,
         secure=settings.cookie_secure,
         samesite="lax",
@@ -62,8 +86,100 @@ def sign_in(payload: SignInIn, response: Response, db: Session = Depends(get_db)
     user = db.scalar(select(User).where(User.email == payload.email.lower()))
     if not verify_password(payload.password, user.password_hash if user else _DUMMY_HASH) or user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Email or password is incorrect.")
+    _set_session(response, user, remember=payload.remember)
+    return user
+
+
+# --- Passwords: forgot, reset, change -------------------------------------------------------------
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _aware(dt: datetime) -> datetime:
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def _usable_token(db: Session, token: str) -> PasswordResetToken | None:
+    row = db.scalar(select(PasswordResetToken).where(PasswordResetToken.token_hash == hash_reset_token(token)))
+    if row is None or row.used_at is not None or _aware(row.expires_at) < _now():
+        return None
+    return row
+
+
+def _set_password(db: Session, user: User, password: str) -> None:
+    user.password_hash = hash_password(password)
+    # Sessions issued before this second stop working, on every device.
+    user.password_changed_at = _now().replace(microsecond=0)
+
+
+@router.post("/password/forgot", response_model=ForgotPasswordOut, dependencies=[Depends(forgot_password_limit)])
+def forgot_password(payload: ForgotPasswordIn, db: Session = Depends(get_db)) -> ForgotPasswordOut:
+    """Creates a single-use reset link and emails it. The response is the same whether or not the email exists."""
+    settings = get_settings()
+    out = ForgotPasswordOut(expires_minutes=settings.reset_token_minutes)
+    user = db.scalar(select(User).where(User.email == payload.email.lower()))
+    if user is None:
+        return out
+
+    token, token_hash = new_reset_token()
+    db.add(
+        PasswordResetToken(
+            user_id=user.id, token_hash=token_hash, expires_at=_now() + timedelta(minutes=settings.reset_token_minutes)
+        )
+    )
+    db.commit()
+    link = f"{settings.app_url.rstrip('/')}/reset-password?token={token}"
+    sent = send_email(
+        user.email,
+        "Reset your FormPilot password",
+        f"Hi {user.full_name},\n\nUse this link to choose a new password. It works once and expires in "
+        f"{settings.reset_token_minutes} minutes:\n\n{link}\n\nIf you didn't ask for this, you can ignore this email; "
+        "your password won't change.\n\nFormPilot",
+    )
+    if not sent:
+        log.info("Password reset link for %s: %s", user.email, link)
+        if not settings.is_production and not email_configured():
+            out.reset_url = link  # development only: lets the flow be tested without an email server
+    return out
+
+
+@router.get("/password/reset", response_model=ResetTokenOut)
+def check_reset_token(token: str, db: Session = Depends(get_db)) -> ResetTokenOut:
+    """Whether a reset link still works, and for which account (so password managers can update it)."""
+    row = _usable_token(db, token)
+    user = db.get(User, row.user_id) if row else None
+    return ResetTokenOut(valid=user is not None, email=user.email if user else None)
+
+
+@router.post("/password/reset", response_model=UserOut, dependencies=[Depends(reset_password_limit)])
+def reset_password(payload: ResetPasswordIn, response: Response, db: Session = Depends(get_db)) -> User:
+    row = _usable_token(db, payload.token)
+    user = db.get(User, row.user_id) if row else None
+    if user is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "This reset link is invalid or has expired. Request a new one.")
+    _set_password(db, user, payload.password)
+    # Every outstanding link for the account stops working, not only this one.
+    for other in db.scalars(select(PasswordResetToken).where(PasswordResetToken.user_id == user.id, PasswordResetToken.used_at.is_(None))):
+        other.used_at = _now()
+    db.commit()
     _set_session(response, user)
     return user
+
+
+@router.post("/password/change", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(signin_limit)])
+def change_password(
+    payload: ChangePasswordIn, response: Response, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> Response:
+    """Changes the password. Other devices are signed out; this browser gets a new session."""
+    if user.password_hash and not verify_password(payload.current_password, user.password_hash):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Your current password is incorrect.")
+    _set_password(db, user, payload.new_password)
+    db.commit()
+    _set_session(response, user)
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response
 
 
 @router.post("/signout", status_code=status.HTTP_204_NO_CONTENT)

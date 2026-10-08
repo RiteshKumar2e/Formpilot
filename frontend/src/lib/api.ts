@@ -107,6 +107,20 @@ export const api = {
     signOut: () => request<void>('/auth/signout', { method: 'POST' }),
     deleteAccount: () => request<void>('/auth/me', { method: 'DELETE' }),
     providers: () => request<{ google: boolean }>('/auth/providers'),
+    forgotPassword: (email: string) =>
+      request<{ ok: boolean; expires_minutes: number; reset_url: string | null }>('/auth/password/forgot', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
+    checkResetToken: (token: string) =>
+      request<{ valid: boolean; email: string | null }>(`/auth/password/reset?token=${encodeURIComponent(token)}`),
+    resetPassword: (token: string, password: string) =>
+      request<User>('/auth/password/reset', { method: 'POST', body: JSON.stringify({ token, password }) }),
+    changePassword: (currentPassword: string, newPassword: string) =>
+      request<void>('/auth/password/change', {
+        method: 'POST',
+        body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+      }),
     /** Full-page navigation: the browser goes to Google and comes back signed in. */
     googleSignInUrl: `${API_ROOT}/auth/oauth/google/start`,
   },

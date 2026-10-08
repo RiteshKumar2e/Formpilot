@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173"
     cookie_secure: bool = False
     session_hours: int = 12
+    # "Remember me" keeps the session for this many days instead of session_hours.
+    remember_days: int = 30
+    # Password reset links stop working after this many minutes.
+    reset_token_minutes: int = 30
     max_upload_bytes: int = 10 * 1024 * 1024
     # Redirect plain-HTTP requests to HTTPS. Defaults to on in production.
     enforce_https: bool | None = None
@@ -53,6 +57,14 @@ class Settings(BaseSettings):
     # --- Sign in with Google (OAuth 2.0 / OpenID Connect) ---
     google_client_id: str = ""
     google_client_secret: str = ""
+
+    # --- Email (password reset links). Without SMTP_HOST, links are only logged and, outside
+    # production, shown on the page so the flow can be tested.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "FormPilot <no-reply@formpilot.app>"
 
     # --- Integrations ---
     webhook_timeout_seconds: float = 5.0

@@ -34,14 +34,56 @@ class SignUpIn(BaseModel):
     @field_validator("password")
     @classmethod
     def _password_strength(cls, v: str) -> str:
-        if not any(c.isalpha() for c in v) or not any(c.isdigit() for c in v):
-            raise ValueError("Include at least one letter and one number.")
-        return v
+        return check_password(v)
+
+
+def check_password(v: str) -> str:
+    if not any(c.isalpha() for c in v) or not any(c.isdigit() for c in v):
+        raise ValueError("Include at least one letter and one number.")
+    return v
 
 
 class SignInIn(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=256)
+    # Keep the session for REMEMBER_DAYS instead of ending it when the browser closes.
+    remember: bool = False
+
+
+class ForgotPasswordIn(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordOut(BaseModel):
+    ok: bool = True
+    expires_minutes: int
+    # Only outside production, when no email server is configured, so the flow can be tested.
+    reset_url: str | None = None
+
+
+class ResetTokenOut(BaseModel):
+    valid: bool
+    email: str | None = None
+
+
+class ResetPasswordIn(BaseModel):
+    token: str = Field(min_length=10, max_length=200)
+    password: str = Field(min_length=6, max_length=256)
+
+    @field_validator("password")
+    @classmethod
+    def _password_strength(cls, v: str) -> str:
+        return check_password(v)
+
+
+class ChangePasswordIn(BaseModel):
+    current_password: str = Field(default="", max_length=256)
+    new_password: str = Field(min_length=6, max_length=256)
+
+    @field_validator("new_password")
+    @classmethod
+    def _password_strength(cls, v: str) -> str:
+        return check_password(v)
 
 
 DocumentStatus = Literal["processing", "processed", "needs_review", "failed"]
