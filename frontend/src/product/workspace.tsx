@@ -5,7 +5,7 @@
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { api, ApiError } from '../lib/api'
-import type { DocumentRecord, FieldMatch, Profile as ApiProfile } from '../types/api'
+import type { ApplicationTemplate, DocumentRecord, FieldMatch, Profile as ApiProfile } from '../types/api'
 import { deriveStatus } from './selectors'
 import type {
   ActivityItem,
@@ -46,6 +46,28 @@ interface NewApplication {
   organization: string
   type: ApplicationType
   labels: string[]
+  /** A saved template whose answers fill fields the profile doesn't cover. */
+  templateId?: string
+}
+
+const normLabel = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+
+/** Fills still-empty fields from a template; every reused value is left for the user to review. */
+function applyTemplate(fields: ApplicationField[], template: ApplicationTemplate): ApplicationField[] {
+  const byLabel = new Map(template.fields.filter((f) => f.value).map((f) => [normLabel(f.label), f]))
+  return fields.map((f) => {
+    if (f.value || f.status === 'conflict') return f
+    const saved = byLabel.get(normLabel(f.label))
+    if (!saved) return f
+    return {
+      ...f,
+      value: saved.value,
+      status: 'needs_review',
+      source: `Template: ${template.name}`,
+      confidence: 0.7,
+      reasoning: `Reused from your “${template.name}” template. Check it fits this application.`,
+    }
+  })
 }
 
 interface WorkspaceContextValue {
@@ -494,7 +516,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   )
 
   const createApplication = useCallback(
-    async ({ title, organization, type, labels }: NewApplication) => {
+    async ({ title, organization, type, labels, templateId }: NewApplication) => {
       const current = dataRef.current
       if (!current) throw new WorkspaceError('Your workspace isn’t loaded.', 'Sign in again to continue.', 'signin')
       const cleaned = labels.map((l) => l.trim()).filter(Boolean)
@@ -505,6 +527,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       try {
         const { matches } = await api.mapping.match(cleaned, id)
         fields = matches.map((m) => fromApiMatch(m, current.profile))
+        if (templateId) fields = applyTemplate(fields, await api.templates.use(templateId))
       } catch (err) {
         throw toWorkspaceError(err, 'Couldn’t map this application.')
       }

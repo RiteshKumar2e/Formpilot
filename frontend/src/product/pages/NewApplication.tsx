@@ -1,11 +1,13 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Briefcase, CheckCircle2, FileUp, GraduationCap, Landmark, Loader2, PenLine, School } from 'lucide-react'
+import { BookmarkCheck, Briefcase, CheckCircle2, FileUp, GraduationCap, Landmark, Loader2, PenLine, School } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { TextField } from '../../components/ui/FormControls'
 import { usePageMeta } from '../../hooks/usePageMeta'
+import { api } from '../../lib/api'
 import { cn } from '../../lib/utils'
+import type { TemplateMatch } from '../../types/api'
 import { useWorkspace, WorkspaceError } from '../workspace'
 import { TEMPLATE_FIELDS } from '../templates'
 import type { ApplicationType } from '../types'
@@ -34,6 +36,27 @@ export function NewApplicationPage() {
   const [errors, setErrors] = useState<Record<string, string | undefined>>({})
   const [analysis, setAnalysis] = useState(0)
   const [error, setError] = useState<WorkspaceError | null>(null)
+  const [templateMatch, setTemplateMatch] = useState<TemplateMatch | null>(null)
+  const [useTemplate, setUseTemplate] = useState(false)
+  const [dismissed, setDismissed] = useState<string | null>(null)
+
+  // Offer a saved template when the form looks like one the user completed before.
+  useEffect(() => {
+    if (step !== 2) return
+    const fieldList = labels.split('\n').map((l) => l.trim()).filter(Boolean)
+    if (fieldList.length < 2) return setTemplateMatch(null)
+    let active = true
+    const timer = window.setTimeout(() => {
+      api.templates.match(fieldList).then(
+        (m) => active && setTemplateMatch(m),
+        () => active && setTemplateMatch(null),
+      )
+    }, 500)
+    return () => {
+      active = false
+      window.clearTimeout(timer)
+    }
+  }, [labels, step])
 
   const chooseType = (t: (typeof TYPES)[number]) => {
     setType(t.id)
@@ -71,7 +94,8 @@ export function NewApplicationPage() {
     setError(null)
     try {
       // The stages are paced so each one is readable; the mapping itself runs during them.
-      const work = createApplication({ title: title.trim(), organization: org.trim(), type, labels: fieldList })
+      const templateId = useTemplate && templateMatch ? templateMatch.id : undefined
+      const work = createApplication({ title: title.trim(), organization: org.trim(), type, labels: fieldList, templateId })
       for (let i = 0; i < ANALYSIS.length; i++) {
         setAnalysis(i)
         await new Promise((r) => setTimeout(r, 550))
@@ -184,6 +208,35 @@ export function NewApplicationPage() {
                 </p>
               )}
             </div>
+            {templateMatch && dismissed !== templateMatch.id && (
+              <div className="flex flex-col gap-3 rounded-[var(--radius-panel)] border border-accent-line bg-panel p-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="flex items-start gap-2 text-[14px] text-ink">
+                  <BookmarkCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
+                  <span>
+                    {useTemplate ? 'Using' : 'Reuse'} your <strong>{templateMatch.name}</strong> template{useTemplate ? '.' : '?'}
+                    <span className="block text-[13px] text-ink-2">
+                      {Math.round(templateMatch.score * 100)}% similar · {templateMatch.reusable} saved {templateMatch.reusable === 1 ? 'answer' : 'answers'}. Reused answers are marked for your review.
+                    </span>
+                  </span>
+                </p>
+                <div className="flex shrink-0 gap-2">
+                  {useTemplate ? (
+                    <Button size="sm" variant="secondary" onClick={() => setUseTemplate(false)}>
+                      Don’t use
+                    </Button>
+                  ) : (
+                    <>
+                      <Button size="sm" onClick={() => setUseTemplate(true)}>
+                        Use Template
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => setDismissed(templateMatch.id)}>
+                        Not now
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
             <div className="flex justify-between gap-2">
               <Button variant="secondary" onClick={() => setStep(1)}>
                 Back
