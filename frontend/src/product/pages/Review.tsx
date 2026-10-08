@@ -1,14 +1,88 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardCheck, FileSearch, Info } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, BookmarkPlus, CheckCircle2, ClipboardCheck, FileSearch, Info } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { usePageMeta } from '../../hooks/usePageMeta'
+import { api, ApiError } from '../../lib/api'
 import { cn } from '../../lib/utils'
 import { useWorkspace } from '../workspace'
 import { formatDateTime, isBlocking, sectionsOf, STATUS_LABEL, summary } from '../selectors'
 import type { Application } from '../types'
 import { Card, EmptyState, FieldStatusBadge, SourceChip } from '../ui'
+
+/** Document filenames an application's answers came from (not Smart Answers or templates). */
+function documentsUsed(app: Application): string[] {
+  const names = app.fields.flatMap((f) => (f.source ?? '').split(',').map((s) => s.replace(/\(confirmed by you\)/i, '').trim()))
+  return [...new Set(names.filter((n) => /\.(pdf|png|jpe?g)$/i.test(n)))]
+}
+
+function SaveTemplate({ app }: { app: Application }) {
+  const [name, setName] = useState(`${app.title} Application`)
+  const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const save = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!name.trim()) return setError('Give the template a name.')
+    setSaving(true)
+    setError(null)
+    try {
+      await api.templates.create({
+        name: name.trim(),
+        application_type: app.type,
+        organization: app.organization || undefined,
+        fields: app.fields.map((f) => ({ label: f.label, value: f.value, section: f.section, profileKey: f.profileKey })),
+        documents: documentsUsed(app),
+      })
+      setSaved(true)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Couldn’t save the template.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (saved) {
+    return (
+      <p role="status" className="mt-6 flex items-center justify-center gap-2 text-[14px] text-success">
+        <CheckCircle2 className="size-4" aria-hidden />
+        Saved to your <Link to="/vault?tab=templates" className="font-medium underline underline-offset-2">Application Vault</Link>
+      </p>
+    )
+  }
+  return (
+    <form onSubmit={save} className="mt-6 rounded-[var(--radius-panel)] border border-accent-line bg-panel p-4 text-left" noValidate>
+      <p className="flex items-center gap-1.5 text-[14px] font-semibold text-ink">
+        <BookmarkPlus className="size-4 text-accent" aria-hidden />
+        Save this application as a reusable template?
+      </p>
+      <p className="mt-1 text-[13px] text-ink-2">
+        Next time a similar form appears, FormPilot offers to reuse its answers, documents and preferences. You still review what’s specific to the new application.
+      </p>
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+        <label htmlFor="template-name" className="sr-only">
+          Template name
+        </label>
+        <input
+          id="template-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="h-10 min-w-0 flex-1 rounded-[var(--radius-control)] border border-line-strong bg-field px-3 text-[14px] outline-none focus:border-accent"
+        />
+        <Button type="submit" size="sm" disabled={saving}>
+          {saving ? 'Saving…' : 'Save Template'}
+        </Button>
+      </div>
+      {error && (
+        <p role="alert" className="mt-2 text-[13px] text-danger">
+          {error}
+        </p>
+      )}
+    </form>
+  )
+}
 
 function Success({ app }: { app: Application }) {
   return (
@@ -23,7 +97,7 @@ function Success({ app }: { app: Application }) {
           <CheckCircle2 className="size-7" aria-hidden />
         </motion.span>
         <h1 className="mt-5 text-[24px] font-semibold tracking-[-0.02em] text-ink" role="status">
-          Application Prepared Successfully
+          Application completed ✓
         </h1>
         <dl className="mx-auto mt-6 max-w-sm space-y-3 text-left text-[15px]">
           <div className="flex justify-between gap-4 border-b border-line pb-3">
@@ -47,6 +121,7 @@ function Success({ app }: { app: Application }) {
           <Info className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
           FormPilot has not sent anything. Your answers are ready to submit through {app.organization || 'the organization'}’s application portal.
         </p>
+        <SaveTemplate app={app} />
         <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
           <Button to={`/applications/${app.id}`} variant="secondary">
             View Application
