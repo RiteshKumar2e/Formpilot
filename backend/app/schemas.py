@@ -362,31 +362,69 @@ class TemplateMatchOut(BaseModel):
 
 
 class AutofillFieldIn(BaseModel):
+    """What the extension knows about one field. Metadata only: never the page's text or values."""
+
     id: str = Field(min_length=1, max_length=200)
-    label: str = Field(min_length=1, max_length=300)
-    type: str = Field(default="text", max_length=30)
+    label: str = Field(default="", max_length=300)
+    type: str = Field(default="text", max_length=30)  # input type, "textarea", "select", "radio", "checkbox", "file"
     required: bool = False
+    name: str | None = Field(default=None, max_length=200)
+    html_id: str | None = Field(default=None, max_length=200)
+    placeholder: str | None = Field(default=None, max_length=300)
+    aria_label: str | None = Field(default=None, max_length=300)
+    autocomplete: str | None = Field(default=None, max_length=100)  # the HTML autocomplete hint, e.g. "email"
+    section: str | None = Field(default=None, max_length=200)  # nearest heading or fieldset legend
+    options: list[str] = Field(default_factory=list, max_length=300)  # dropdown / radio option labels
+
+    @field_validator("options")
+    @classmethod
+    def _trim_options(cls, v: list[str]) -> list[str]:
+        return [o.strip()[:200] for o in v if o and o.strip()]
 
 
 class AutofillIn(BaseModel):
     fields: list[AutofillFieldIn] = Field(min_length=1, max_length=150)
-    page_url: str | None = Field(default=None, max_length=2000)
+    page_url: str | None = Field(default=None, max_length=2000)  # the extension sends only the origin
     page_title: str | None = Field(default=None, max_length=300)
     organization: str | None = Field(default=None, max_length=200)
     role: str | None = Field(default=None, max_length=200)
 
 
+class AutofillAlternativeOut(BaseModel):
+    value: str
+    source: str | None = None
+
+
+class AutofillDocumentOut(BaseModel):
+    id: str
+    filename: str
+
+
+class AutofillProfileValueOut(BaseModel):
+    key: str
+    label: str
+    value: str
+
+
 class AutofillSuggestionOut(BaseModel):
     id: str
     label: str
-    kind: Literal["value", "answer", "document"]
+    key: str | None = None
+    kind: Literal["value", "choice", "answer", "document", "consent"]
     status: Literal["ready", "needs_review", "missing"]
     value: str | None
     source: str | None
     confidence: float
+    # safe ≥ 90% · review 75–90% · uncertain 50–75% · none: nothing suggested
+    tier: Literal["safe", "review", "uncertain", "none"] = "none"
     verified: bool
+    # Dates of birth, addresses, ID numbers and uploads: filled only after the user confirms that field.
+    sensitive: bool = False
     reasoning: str
     method: str | None = None
+    option: str | None = None  # the dropdown / radio option to select
+    value_iso: str | None = None  # dates as YYYY-MM-DD; the page formats them for its own field
+    alternatives: list[AutofillAlternativeOut] = []
     document_id: str | None = None
     sources: list[SmartAnswerSourceOut] = []
 
@@ -405,3 +443,5 @@ class AutofillSuggestOut(BaseModel):
     summary: AutofillSummaryOut
     template: TemplateMatchOut | None
     workflow_id: str
+    documents: list[AutofillDocumentOut] = []  # vault files the user can choose for upload fields
+    profile: list[AutofillProfileValueOut] = []  # for "Choose another" on uncertain fields

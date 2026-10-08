@@ -163,5 +163,9 @@ def use_template(template_id: str, user: User = Depends(get_current_user), db: S
 @router.post("/autofill/suggest", response_model=AutofillSuggestOut)
 def autofill_suggest(payload: AutofillIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> AutofillSuggestOut:
     """Suggested values for the fields of a form on another website. FormPilot never submits the form."""
-    fields, summary, template, workflow_id = autofill.suggest(db, user, payload.fields, payload.page_title, payload.organization, payload.role)
-    return AutofillSuggestOut(fields=fields, summary=summary, template=template, workflow_id=workflow_id)
+    fields, summary, template, workflow_id, documents, profile = autofill.suggest(
+        db, user, payload.fields, payload.page_title, payload.organization, payload.role
+    )
+    return AutofillSuggestOut(
+        fields=fields, summary=summary, template=template, workflow_id=workflow_id, documents=documents, profile=profile
+    )

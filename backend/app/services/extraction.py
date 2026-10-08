@@ -367,6 +367,25 @@ def _extract_address(lines: list[str]) -> Extracted | None:
     return None
 
 
+GENDER_RE = re.compile(r"\b(?:gender|sex)\s*[:\-]\s*(male|female|other|non[- ]binary|transgender)\b", re.I)
+CGPA_RE = re.compile(r"\b(?:c\.?g\.?p\.?a|g\.?p\.?a)\b\s*(?:of|:|-|=)?\s*(\d{1,2}(?:\.\d{1,2})?)(?:\s*/\s*(10|4(?:\.0)?))?", re.I)
+
+
+def _extract_gender(text: str) -> Extracted | None:
+    m = GENDER_RE.search(text)
+    return Extracted("gender", m.group(1).capitalize(), 0.9) if m else None
+
+
+def _extract_cgpa(text: str) -> Extracted | None:
+    m = CGPA_RE.search(text)
+    if not m:
+        return None
+    value, scale = float(m.group(1)), m.group(2)
+    if value > float(scale or 10):
+        return None
+    return Extracted("cgpa", f"{m.group(1)}/{scale}" if scale else m.group(1), 0.85)
+
+
 def extract_fields(text: str) -> list[Extracted]:
     lines = [_clean(l) for l in text.splitlines()]
     lines = [l for l in lines if l]
@@ -391,6 +410,10 @@ def extract_fields(text: str) -> list[Extracted]:
         found.append(Extracted("github", m.group(0), 0.95))
     if address := _extract_address(lines):
         found.append(address)
+    if gender := _extract_gender(text):
+        found.append(gender)
+    if cgpa := _extract_cgpa(text):
+        found.append(cgpa)
     for key in LIST_SECTIONS:
         if item := _extract_list_section(key, lines):
             found.append(item)

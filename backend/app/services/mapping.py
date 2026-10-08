@@ -18,6 +18,16 @@ from .fields import CONCEPTS
 MIN_SCORE = 0.45
 _STOPWORDS = {"the", "a", "an", "your", "you", "please", "enter", "provide", "of", "applicant's", "s", "current", "full"}
 # Semantic matching: minimum cosine similarity, and how far ahead of the runner-up concept it must be.
+# Labels about another person or thing ("Father's Name", "Company email", "Team name"). Their answer is
+# never the applicant's own name, email, phone, address or birthday, however similar the wording.
+OTHER_ENTITY_RE = re.compile(
+    r"\b(father|mother|parent|guardian|spouse|husband|wife|nominee|sibling|brother|sister|son|daughter|"
+    r"reference|referee|emergency|manager|supervisor|recruiter|company|employer|organi[sz]ation|team|project|"
+    r"event|referrer|kin)s?\b",
+    re.I,
+)
+PERSONAL_KEYS = {"full_name", "first_name", "last_name", "email", "phone", "address", "date_of_birth", "gender"}
+
 # Tuned on eval/form_labels.json for few wrong fills over maximum coverage (see eval/run_eval.py).
 SEMANTIC_MIN = 0.76
 SEMANTIC_MARGIN = 0.02
@@ -78,9 +88,13 @@ def semantic_classify(label: str) -> tuple[str | None, float]:
 def classify_hybrid(label: str) -> tuple[str | None, float, str]:
     """Returns (concept key, score, matcher) where matcher is "lexical" or "semantic"."""
     key, score = classify(label)
+    matcher = "lexical"
+    if not key:
+        key, score = semantic_classify(label)
+        matcher = "semantic"
+    if key in PERSONAL_KEYS and OTHER_ENTITY_RE.search(label):
+        # e.g. "Emergency contact phone" is someone else's number, not the applicant's.
+        key = "emergency_contact" if re.search(r"emergency|guardian|kin", label, re.I) else None
     if key:
-        return key, score, "lexical"
-    key, sem = semantic_classify(label)
-    if key:
-        return key, sem, "semantic"
+        return key, score, matcher
     return None, score, "lexical"

@@ -196,16 +196,18 @@ def test_autofill_for_an_external_form(signed_in):
     # The name comes from the resume's first line only (confidence 0.75), so the user confirms it.
     assert by_id["name"]["value"] == "Ritesh Kumar" and by_id["name"]["status"] == "needs_review"
     assert by_id["email"]["status"] == "ready" and by_id["email"]["verified"] is True
-    assert by_id["resume"]["kind"] == "document" and by_id["resume"]["value"] == "Resume.pdf" and by_id["resume"]["document_id"]
+    resume = by_id["resume"]
+    assert resume["kind"] == "document" and resume["value"] == "Resume.pdf" and resume["document_id"]
+    assert resume["status"] == "needs_review" and resume["sensitive"]  # attached only when the user chooses it
     why = by_id["why"]
     assert why["kind"] == "answer" and why["status"] == "needs_review" and why["value"]  # suggested, never auto-used
 
     summary = body["summary"]
     assert summary["detected"] == 12
     assert summary["ready"] + summary["needs_review"] + summary["missing"] == 12
-    assert summary["ready"] >= 8
+    assert summary["ready"] >= 7
     run = next(r for r in signed_in.get("/api/workflows").json() if r["id"] == body["workflow_id"])
-    assert [s["name"] for s in run["steps"]] == ["detect", "map_details", "smart_answers", "documents", "template"]
+    assert [s["name"] for s in run["steps"]] == ["detect", "map_details", "smart_answers", "documents", "saved_answers", "template"]
 
 
 def test_autofill_reuses_template_answers_for_review(signed_in):
