@@ -15,6 +15,7 @@ os.environ["LLM_ENABLED"] = "false"
 os.environ["EMBEDDING_PROVIDER"] = "hash"
 os.environ["GOOGLE_CLIENT_ID"] = ""
 os.environ["GOOGLE_CLIENT_SECRET"] = ""
+os.environ["SMTP_HOST"] = ""  # never send real email from tests
 os.environ["STORAGE_DIR"] = str(_TMP / "storage")
 os.environ["ENVIRONMENT"] = "development"
 os.environ["RATE_LIMIT_ENABLED"] = "false"  # enabled explicitly in the rate-limit test
