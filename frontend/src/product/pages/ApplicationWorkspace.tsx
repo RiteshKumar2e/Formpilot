@@ -5,6 +5,8 @@ import { AlertTriangle, ArrowLeft, Check, CheckCircle2, CircleDashed, FileSearch
 import { Button } from '../../components/ui/Button'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import { cn } from '../../lib/utils'
+import { SmartAnswerCard } from '../SmartAnswer'
+import { isOpenQuestion } from '../questions'
 import { useWorkspace, WorkspaceError } from '../workspace'
 import { isBlocking, sectionsOf, summary } from '../selectors'
 import type { Application, ApplicationField } from '../types'
@@ -69,13 +71,28 @@ function AssistantPanel({ app, field }: { app: Application; field: ApplicationFi
   const [viewSource, setViewSource] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saveToProfile, setSaveToProfile] = useState(true)
+  const [suggesting, setSuggesting] = useState(false)
   const locked = app.status === 'prepared'
+  const openQuestion = isOpenQuestion(field.label, field.profileKey)
+
+  const applySuggestedAnswer = (answer: string) => {
+    updateField(app.id, field.id, {
+      value: answer,
+      source: 'Smart Answer',
+      status: 'confirmed',
+      confidence: 1,
+      reasoning: 'Suggested by FormPilot from your profile and documents, then reviewed and accepted by you.',
+    })
+    setSuggesting(false)
+    setEditing(false)
+  }
 
   useEffect(() => {
-    setEditing(field.status === 'missing')
+    setEditing(field.status === 'missing' && !isOpenQuestion(field.label, field.profileKey))
+    setSuggesting(false)
     setDraft(field.value)
     setError(null)
-  }, [field.id, field.status, field.value])
+  }, [field.id, field.status, field.value, field.label, field.profileKey])
 
   const saveManual = async (e: FormEvent) => {
     e.preventDefault()
@@ -171,6 +188,22 @@ function AssistantPanel({ app, field }: { app: Application; field: ApplicationFi
         </div>
       )}
 
+      {/* Smart Answers: open questions get a suggested answer the person reviews */}
+      {openQuestion && !locked && !editing && (!field.value || suggesting) && (
+        <div className="mt-5 space-y-3">
+          <SmartAnswerCard
+            key={field.id}
+            question={field.label}
+            organization={app.organization || undefined}
+            role={app.title}
+            onUse={applySuggestedAnswer}
+          />
+          <button type="button" onClick={() => setEditing(true)} className="text-[13px] text-accent underline underline-offset-2">
+            Write it myself
+          </button>
+        </div>
+      )}
+
       {/* Manual entry: missing values, conflicts edited manually, or Change */}
       {editing && !locked && (
         <form onSubmit={saveManual} className="mt-5 space-y-3" noValidate>
@@ -228,6 +261,12 @@ function AssistantPanel({ app, field }: { app: Application; field: ApplicationFi
             <Pencil className="size-3.5" aria-hidden />
             Change
           </Button>
+          {openQuestion && !suggesting && (
+            <Button size="sm" variant="secondary" onClick={() => setSuggesting(true)}>
+              <Sparkles className="size-3.5" aria-hidden />
+              Suggest an answer
+            </Button>
+          )}
           {field.source && (
             <Button size="sm" variant="secondary" onClick={() => setViewSource(field.source)}>
               <FileSearch className="size-3.5" aria-hidden />
