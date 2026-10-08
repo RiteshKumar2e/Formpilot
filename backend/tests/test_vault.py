@@ -203,7 +203,6 @@ def test_autofill_for_an_external_form(signed_in):
     summary = body["summary"]
     assert summary["detected"] == 12
     assert summary["ready"] + summary["needs_review"] + summary["missing"] == 12
-    print(summary, {f["id"]: f["status"] for f in body["fields"]})
     assert summary["ready"] >= 8
     run = next(r for r in signed_in.get("/api/workflows").json() if r["id"] == body["workflow_id"])
     assert [s["name"] for s in run["steps"]] == ["detect", "map_details", "smart_answers", "documents", "template"]

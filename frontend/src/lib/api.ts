@@ -1,10 +1,17 @@
 import type {
+  ApplicationTemplate,
+  AutofillFieldInput,
+  AutofillResponse,
   Capabilities,
   ContactPayload,
   DocumentRecord,
   MappingResponse,
   Profile,
+  SavedAnswer,
   SignInPayload,
+  SmartAnswer,
+  TemplateField,
+  TemplateMatch,
   SignUpPayload,
   User,
   Webhook,
@@ -107,6 +114,17 @@ export const api = {
     list: () => request<DocumentRecord[]>('/documents'),
     upload: uploadWithProgress,
     remove: (id: string) => request<void>(`/documents/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    /** The original file, for attaching vault documents to a form. */
+    download: async (id: string): Promise<Blob> => {
+      let res: Response
+      try {
+        res = await fetch(`${API_ROOT}/documents/${encodeURIComponent(id)}/file`, { credentials: 'include' })
+      } catch {
+        throw new ApiError(NETWORK_ERROR, 0)
+      }
+      if (!res.ok) throw await parseError(res)
+      return res.blob()
+    },
   },
   profile: {
     get: () => request<Profile>('/profile'),
@@ -122,6 +140,30 @@ export const api = {
     save: <T extends { id: string },>(app: T) =>
       request<T>(`/applications/${encodeURIComponent(app.id)}`, { method: 'PUT', body: JSON.stringify(app) }),
     remove: (id: string) => request<void>(`/applications/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  },
+  answers: {
+    list: () => request<SavedAnswer[]>('/answers'),
+    create: (question: string, answer: string) =>
+      request<SavedAnswer>('/answers', { method: 'POST', body: JSON.stringify({ question, answer }) }),
+    update: (id: string, question: string, answer: string) =>
+      request<SavedAnswer>(`/answers/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify({ question, answer }) }),
+    remove: (id: string) => request<void>(`/answers/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    suggest: (question: string, context: { organization?: string; role?: string } = {}) =>
+      request<SmartAnswer>('/answers/suggest', { method: 'POST', body: JSON.stringify({ question, ...context }) }),
+  },
+  templates: {
+    list: () => request<ApplicationTemplate[]>('/templates'),
+    create: (payload: { name: string; application_type: string; organization?: string; fields: TemplateField[]; documents: string[] }) =>
+      request<ApplicationTemplate>('/templates', { method: 'POST', body: JSON.stringify(payload) }),
+    remove: (id: string) => request<void>(`/templates/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    match: (labels: string[]) =>
+      request<TemplateMatch | null>('/templates/match', { method: 'POST', body: JSON.stringify({ labels }) }),
+    use: (id: string) => request<ApplicationTemplate>(`/templates/${encodeURIComponent(id)}/use`, { method: 'POST' }),
+  },
+  autofill: {
+    /** What the browser extension sends: the fields it detected on another website's form. */
+    suggest: (payload: { fields: AutofillFieldInput[]; page_url?: string; page_title?: string; organization?: string; role?: string }) =>
+      request<AutofillResponse>('/autofill/suggest', { method: 'POST', body: JSON.stringify(payload) }),
   },
   workflows: {
     list: (subjectId?: string) =>

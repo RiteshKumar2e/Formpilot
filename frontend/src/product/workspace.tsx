@@ -110,13 +110,17 @@ const SECTION_FOR: Record<string, ProfileSection> = {
   date_of_birth: 'personal',
   email: 'contact',
   phone: 'contact',
-  linkedin: 'contact',
-  github: 'contact',
+  linkedin: 'links',
+  github: 'links',
   highest_qualification: 'education',
   institution: 'education',
   graduation_year: 'education',
   experience: 'experience',
   skills: 'skills',
+  projects: 'projects',
+  achievements: 'achievements',
+  certifications: 'certifications',
+  address: 'addresses',
 }
 
 const FORM_SECTION: Record<ProfileSection, string> = {
@@ -125,6 +129,11 @@ const FORM_SECTION: Record<ProfileSection, string> = {
   education: 'Education',
   experience: 'Experience',
   skills: 'Skills',
+  projects: 'Experience',
+  achievements: 'Experience',
+  certifications: 'Education',
+  links: 'Personal Information',
+  addresses: 'Personal Information',
 }
 
 /** Details every profile should have; mirrors CORE_FIELDS in backend/app/services/fields.py. */
@@ -147,7 +156,10 @@ function fromApiProfile(p: ApiProfile): ProfileField[] {
     value: f.value,
     source: f.source_filename,
     confidence: f.confidence,
-    verified: f.confidence >= 0.9 || f.source_filename.includes('confirmed by you'),
+    verified: f.verified,
+    verification: f.verification,
+    sources: f.sources,
+    updatedAt: f.updated_at,
   }))
   for (const c of p.conflicts) {
     fields.push({
@@ -158,13 +170,27 @@ function fromApiProfile(p: ApiProfile): ProfileField[] {
       source: null,
       confidence: 0,
       verified: false,
+      verification: 'unverified',
+      sources: c.values.map((v) => v.source_filename),
+      updatedAt: null,
       conflict: c.values.map((v) => ({ value: v.value, source: v.source_filename })),
     })
   }
   // Core details not found in any document appear as empty rows the user can fill in.
   for (const core of CORE_FIELDS) {
     if (!fields.some((f) => f.key === core.key)) {
-      fields.push({ key: core.key, label: core.label, section: SECTION_FOR[core.key], value: '', source: null, confidence: 0, verified: false })
+      fields.push({
+        key: core.key,
+        label: core.label,
+        section: SECTION_FOR[core.key],
+        value: '',
+        source: null,
+        confidence: 0,
+        verified: false,
+        verification: 'unverified',
+        sources: [],
+        updatedAt: null,
+      })
     }
   }
   return fields

@@ -28,12 +28,18 @@ export interface DocumentRecord {
   created_at: string
 }
 
+export type Verification = 'confirmed_by_you' | 'multiple_documents' | 'high_confidence' | 'unverified'
+
 export interface ProfileField {
   key: string
   label: string
   value: string
   confidence: number
   source_filename: string
+  sources: string[]
+  verification: Verification
+  verified: boolean
+  updated_at: string | null
 }
 
 export interface ConflictValue {
@@ -117,6 +123,85 @@ export interface Capabilities {
   database: string
   ocr: boolean
   oauth: { google: boolean }
+}
+
+export interface SavedAnswer {
+  id: string
+  question: string
+  answer: string
+  use_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface SmartAnswerSource {
+  type: 'profile' | 'document' | 'saved_answer'
+  label: string
+  detail: string | null
+}
+
+export interface SmartAnswer {
+  answer: string
+  method: 'llm_rag' | 'saved_answer' | 'profile_draft' | 'none'
+  sources: SmartAnswerSource[]
+  is_suggestion: true
+}
+
+export interface TemplateField {
+  label: string
+  value: string
+  section?: string | null
+  profileKey?: string | null
+}
+
+export interface ApplicationTemplate {
+  id: string
+  name: string
+  application_type: string
+  organization: string | null
+  fields: TemplateField[]
+  documents: string[]
+  common_answers: TemplateField[]
+  completed: number
+  total: number
+  use_count: number
+  created_at: string
+}
+
+export interface TemplateMatch {
+  id: string
+  name: string
+  score: number
+  reusable: number
+}
+
+export interface AutofillFieldInput {
+  id: string
+  label: string
+  type: string
+  required?: boolean
+}
+
+export interface AutofillSuggestion {
+  id: string
+  label: string
+  kind: 'value' | 'answer' | 'document'
+  status: 'ready' | 'needs_review' | 'missing'
+  value: string | null
+  source: string | null
+  confidence: number
+  verified: boolean
+  reasoning: string
+  method: string | null
+  document_id: string | null
+  sources: SmartAnswerSource[]
+}
+
+export interface AutofillResponse {
+  fields: AutofillSuggestion[]
+  summary: { detected: number; ready: number; needs_review: number; missing: number; verified: number; confidence: number }
+  template: TemplateMatch | null
+  workflow_id: string
 }
 
 export interface SignUpPayload {

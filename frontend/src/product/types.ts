@@ -1,6 +1,18 @@
 // Domain model for the FormPilot product, built from FastAPI responses (see src/product/workspace.tsx).
 
-export type ProfileSection = 'personal' | 'contact' | 'education' | 'experience' | 'skills'
+export type ProfileSection =
+  | 'personal'
+  | 'contact'
+  | 'education'
+  | 'experience'
+  | 'skills'
+  | 'projects'
+  | 'achievements'
+  | 'certifications'
+  | 'links'
+  | 'addresses'
+
+export type Verification = 'confirmed_by_you' | 'multiple_documents' | 'high_confidence' | 'unverified'
 
 export interface ProfileField {
   key: string
@@ -11,6 +23,11 @@ export interface ProfileField {
   source: string | null
   confidence: number // 0..1
   verified: boolean
+  /** Why the value is trusted (or not). */
+  verification: Verification
+  /** Every document the value was found in. */
+  sources: string[]
+  updatedAt: string | null
   /** Present while documents disagree on this value and the user hasn't chosen yet. */
   conflict?: { value: string; source: string }[]
 }
