@@ -59,15 +59,36 @@ export function typeOf(el: FieldElement): string {
   return (el.type || 'text').toLowerCase()
 }
 
+/**
+ * Whether a person can actually see the field. Pages can hide inputs (transparent, tiny, off-screen or
+ * clipped) to collect autofilled data the person never meant to give, so those are never offered.
+ */
 function isVisible(el: HTMLElement): boolean {
-  if (el.closest('[aria-hidden="true"], [hidden]')) return false
+  if (el.closest('[aria-hidden="true"], [hidden], [inert]')) return false
   const check = (el as HTMLElement & { checkVisibility?: (o?: object) => boolean }).checkVisibility
-  if (typeof check === 'function') return check.call(el, { checkVisibilityCSS: true })
-  for (let node: HTMLElement | null = el; node; node = node.parentElement) {
-    const style = node.ownerDocument.defaultView?.getComputedStyle(node)
-    if (style && (style.display === 'none' || style.visibility === 'hidden')) return false
+  if (typeof check === 'function') {
+    if (!check.call(el, { checkVisibilityCSS: true, checkOpacity: true, opacityProperty: true })) return false
   }
-  return true
+  const view = el.ownerDocument.defaultView
+  for (let node: HTMLElement | null = el; node; node = node.parentElement) {
+    const style = view?.getComputedStyle(node)
+    if (!style) continue
+    if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) < 0.1) return false
+    if (style.clipPath === 'inset(50%)' || /rect\(0(px)?,? 0(px)?,? 0(px)?,? 0(px)?\)/.test(style.clip)) return false
+  }
+  // Size and position, where the page has layout (DOMs without layout, as in tests, measure everything 0x0).
+  if (!hasLayout(el.ownerDocument)) return true
+  const rect = el.getBoundingClientRect()
+  if (rect.width < 4 || rect.height < 4) return false
+  const scrollX = view?.scrollX ?? 0
+  const scrollY = view?.scrollY ?? 0
+  const pageWidth = Math.max(el.ownerDocument.documentElement.scrollWidth, view?.innerWidth ?? 0)
+  return rect.right + scrollX > 0 && rect.bottom + scrollY > 0 && rect.left + scrollX < pageWidth
+}
+
+function hasLayout(doc: Document): boolean {
+  const rect = doc.body?.getBoundingClientRect()
+  return Boolean(rect && (rect.width > 0 || rect.height > 0))
 }
 
 /** Text right before the field: "<div>Full name</div><input>" or "Full name <input>". */

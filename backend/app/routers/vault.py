@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..deps import get_current_user
 from ..models import ApplicationTemplate, SavedAnswer, User
+from ..ratelimit import ai_rate_limit
 from ..schemas import (
     AutofillIn,
     AutofillSuggestOut,
@@ -71,7 +72,7 @@ def delete_answer(answer_id: str, user: User = Depends(get_current_user), db: Se
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.post("/answers/suggest", response_model=SmartAnswerOut)
+@router.post("/answers/suggest", response_model=SmartAnswerOut, dependencies=[Depends(ai_rate_limit)])
 def smart_answer(payload: SmartAnswerIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> SmartAnswerOut:
     """Suggests an answer to an open question from the profile, documents and saved answers. Never saved automatically."""
     s = suggest_answer(db, user, payload.question, payload.organization, payload.role, payload.max_words)
@@ -160,7 +161,7 @@ def use_template(template_id: str, user: User = Depends(get_current_user), db: S
 # --- Browser extension ------------------------------------------------------------------------
 
 
-@router.post("/autofill/suggest", response_model=AutofillSuggestOut)
+@router.post("/autofill/suggest", response_model=AutofillSuggestOut, dependencies=[Depends(ai_rate_limit)])
 def autofill_suggest(payload: AutofillIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> AutofillSuggestOut:
     """Suggested values for the fields of a form on another website. FormPilot never submits the form."""
     fields, summary, template, workflow_id, documents, profile = autofill.suggest(

@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     enforce_https: bool | None = None
     # Trust X-Forwarded-For / X-Forwarded-Proto. Enable only behind a reverse proxy you control.
     trust_proxy_headers: bool = False
+    # How many proxies append to X-Forwarded-For in front of the API: 1 for Render alone, 2 for Vercel -> Render.
+    trusted_proxy_hops: int = 1
     rate_limit_enabled: bool = True
 
     # Public URL of the web app. OAuth sign-in returns the browser here.

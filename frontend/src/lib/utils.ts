@@ -17,7 +17,7 @@ export function validateRequired(value: string, label: string): string | undefin
 
 export function validatePassword(value: string): string | undefined {
   if (!value) return 'Enter a password.'
-  if (value.length < 6) return 'Use at least 6 characters.'
+  if (value.length < 8) return 'Use at least 8 characters.'
   if (!/[A-Za-z]/.test(value) || !/\d/.test(value)) return 'Include at least one letter and one number.'
   return undefined
 }

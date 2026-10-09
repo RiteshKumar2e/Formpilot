@@ -184,7 +184,7 @@ export function GetStartedPage() {
           autoComplete="new-password"
           value={values.password}
           error={errors.password}
-          hint="At least 6 characters, with a letter and a number."
+          hint="At least 8 characters, with a letter and a number."
           onChange={(e) => setValues({ ...values, password: e.target.value })}
         />
         <PasswordStrength value={values.password} />
@@ -506,7 +506,7 @@ export function ResetPasswordPage() {
           autoComplete="new-password"
           value={values.password}
           error={errors.password}
-          hint="At least 6 characters, with a letter and a number."
+          hint="At least 8 characters, with a letter and a number."
           onChange={(e) => setValues({ ...values, password: e.target.value })}
         />
         <PasswordStrength value={values.password} />

@@ -210,6 +210,7 @@ Create a key at [console.groq.com/keys](https://console.groq.com/keys) and set `
 | `COOKIE_SECURE` | `false` | Must be `true` in production (HTTPS only). |
 | `ENFORCE_HTTPS` | on in production | Redirects HTTP to HTTPS and sends HSTS. |
 | `TRUST_PROXY_HEADERS` | `false` | Trust `X-Forwarded-*` when behind a reverse proxy you control. |
+| `TRUSTED_PROXY_HOPS` | `1` | How many proxies append to `X-Forwarded-For` (2 for Vercel -> Render). Rate limits read the client IP from that position, so it can't be spoofed. |
 | `RATE_LIMIT_ENABLED` | `true` | Per-IP limits on sign-up, sign-in, contact and uploads. |
 | `SESSION_HOURS` | `12` | Session lifetime without "Remember me" (the cookie also ends when the browser closes). |
 | `REMEMBER_DAYS` | `30` | Session lifetime with "Remember me". |

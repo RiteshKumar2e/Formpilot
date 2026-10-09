@@ -103,6 +103,7 @@ Railway and Fly.io work the same way: a Python web service plus a persistent vol
    ADMIN_EMAILS=you@example.com           # who can open /admin
    COOKIE_SECURE=true
    TRUST_PROXY_HEADERS=true
+   TRUSTED_PROXY_HOPS=2                   # Vercel -> Render; use 1 if browsers call Render directly
 
    SMTP_HOST=smtp.gmail.com
    SMTP_PORT=587
@@ -201,6 +202,7 @@ Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` on the backend. The **Continue
 | Render:`uvicorn: command not found`                      | Start with`python -m uvicorn ...` instead of `uvicorn ...`.                                         |
 | Signed in, but every page says "Please sign in"            | The frontend calls the API on another site. Use the`/api` rewrite and an empty `VITE_API_BASE_URL`. |
 | API won't start: "Missing required settings in production" | `SECRET_KEY`, `FILE_ENCRYPTION_KEY` or `COOKIE_SECURE=true` is missing.                           |
+| Every sign-in or save fails with 403 "Cross-site request refused" | `CORS_ORIGINS` (or `APP_URL`) on the backend doesn't include the site's address. Set both to `https://formpilot-six.vercel.app`. |
 | Redirect loop or "too many redirects"                      | `TRUST_PROXY_HEADERS` isn't `true` behind the host's proxy, so HTTPS requests look like HTTP.       |
 | Uploaded documents vanish after a redeploy                 | No persistent disk, or`STORAGE_DIR` isn't on it.                                                      |
 | Instance restarts while processing an upload               | Out of memory: use 1 GB+ RAM or`EMBEDDING_PROVIDER=hash`.                                             |

@@ -7,6 +7,7 @@ from fastapi.responses import RedirectResponse
 from .config import get_settings
 from . import admin_account, migrations
 from .database import Base, engine
+from .middleware import SecurityGuards
 from .services import vectorstore
 from .routers import admin, applications, auth, contact, documents, extension, integrations, profile, system, vault
 
@@ -39,6 +40,10 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Content-Type", "Accept", "Authorization"],
 )
+
+
+# Size and cross-site checks run before routing, so nothing reads a refused body.
+app.add_middleware(SecurityGuards)
 
 
 @app.middleware("http")

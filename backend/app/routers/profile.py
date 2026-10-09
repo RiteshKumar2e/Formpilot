@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..deps import get_current_user
 from ..models import ProfileChoice, User
+from ..ratelimit import ai_rate_limit
 from ..schemas import MappingIn, MappingOut, ProfileOut, ResolveConflictIn
 from ..services.fields import FIELD_LABELS
 from ..services.rag import map_fields as rag_map_fields
@@ -32,7 +33,7 @@ def resolve_conflict(payload: ResolveConflictIn, user: User = Depends(get_curren
     return build_profile(db, user)
 
 
-@router.post("/mapping", response_model=MappingOut)
+@router.post("/mapping", response_model=MappingOut, dependencies=[Depends(ai_rate_limit)])
 def map_fields(payload: MappingIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> MappingOut:
     """Maps form labels to the user's details using retrieval-augmented generation (see services/rag.py)."""
     matches, workflow_id = rag_map_fields(db, user, payload.fields, payload.application_id)

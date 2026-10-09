@@ -1,4 +1,5 @@
 from pathlib import PurePath
+from urllib.parse import quote
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, UploadFile, status
 from sqlalchemy import select
@@ -82,12 +83,18 @@ def download_document(document_id: str, user: User = Depends(get_current_user), 
         data = storage.load(doc.storage_key)
     except (OSError, ValueError) as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "This file is no longer available.") from exc
-    safe_name = doc.filename.replace('"', "")
     return Response(
         content=data,
         media_type=doc.content_type,
-        headers={"Content-Disposition": f'attachment; filename="{safe_name}"', "Cache-Control": "private, no-store"},
+        headers={"Content-Disposition": content_disposition(doc.filename), "Cache-Control": "private, no-store"},
     )
+
+
+def content_disposition(filename: str) -> str:
+    """RFC 6266 attachment header: an ASCII fallback plus the exact UTF-8 name (Hindi and other names work)."""
+    name = "".join(c for c in filename if c.isprintable()) or "document"  # isprintable() drops CR/LF and controls
+    fallback = "".join(c if c.isascii() and c not in '"\\' else "_" for c in name)
+    return f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{quote(name, safe='')}"
 
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)

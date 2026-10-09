@@ -27,7 +27,7 @@ class SessionOut(BaseModel):
 class SignUpIn(BaseModel):
     full_name: str = Field(min_length=1, max_length=200)
     email: EmailStr
-    password: str = Field(min_length=6, max_length=256)
+    password: str = Field(min_length=8, max_length=256)
     website: str = Field(default="", max_length=200)  # honeypot
 
     @field_validator("full_name")
@@ -75,7 +75,7 @@ class ResetTokenOut(BaseModel):
 
 class ResetPasswordIn(BaseModel):
     token: str = Field(min_length=10, max_length=200)
-    password: str = Field(min_length=6, max_length=256)
+    password: str = Field(min_length=8, max_length=256)
 
     @field_validator("password")
     @classmethod
@@ -85,7 +85,7 @@ class ResetPasswordIn(BaseModel):
 
 class ChangePasswordIn(BaseModel):
     current_password: str = Field(default="", max_length=256)
-    new_password: str = Field(min_length=6, max_length=256)
+    new_password: str = Field(min_length=8, max_length=256)
 
     @field_validator("new_password")
     @classmethod

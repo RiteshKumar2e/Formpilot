@@ -35,28 +35,64 @@ class InvalidWebhookUrl(ValueError):
     pass
 
 
-def validate_webhook_url(url: str) -> str:
-    """Rejects URLs that would let a user make the server call its own network (SSRF)."""
+def _checked_parts(url: str):
     parts = urlsplit(url.strip())
     if parts.scheme not in ("http", "https") or not parts.hostname:
         raise InvalidWebhookUrl("Enter a full URL starting with https://")
-    settings = get_settings()
-    if not settings.is_production:
-        return url.strip()
-    if parts.scheme != "https":
+    if get_settings().is_production and parts.scheme != "https":
         raise InvalidWebhookUrl("Webhook URLs must use https.")
-    try:
-        addresses = {info[4][0] for info in socket.getaddrinfo(parts.hostname, parts.port or 443)}
-    except socket.gaierror as exc:
-        raise InvalidWebhookUrl("This host can't be resolved.") from exc
-    for address in addresses:
-        if not ipaddress.ip_address(address).is_global:
-            raise InvalidWebhookUrl("Webhook URLs must point to a public internet address.")
+    return parts
+
+
+def validate_webhook_url(url: str) -> str:
+    """Rejects URLs that would let a user make the server call its own network (SSRF)."""
+    parts = _checked_parts(url)
+    if get_settings().is_production:
+        _public_address(parts.hostname or "", parts.port or 443)
     return url.strip()
 
 
 def sign(secret: str, body: bytes) -> str:
     return "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+
+
+def _public_address(hostname: str, port: int) -> str:
+    """Resolves `hostname` once and returns an address only if every answer is public."""
+    try:
+        addresses = [info[4][0] for info in socket.getaddrinfo(hostname, port, proto=socket.IPPROTO_TCP)]
+    except socket.gaierror as exc:
+        raise InvalidWebhookUrl("This host can't be resolved.") from exc
+    if not addresses or any(not ipaddress.ip_address(a).is_global for a in addresses):
+        raise InvalidWebhookUrl("Webhook URLs must point to a public internet address.")
+    return addresses[0]
+
+
+def post_signed(url: str, secret: str, event: str, body: bytes) -> httpx.Response:
+    """POSTs a signed event. In production the host is resolved once, checked, and the connection pinned to
+    that address (TLS still verifies the real hostname), so DNS rebinding can't swap in an internal address
+    between the check and the request."""
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "FormPilot-Webhooks/1.0",
+        "X-FormPilot-Event": event,
+        "X-FormPilot-Signature": sign(secret, body),
+    }
+    extensions: dict = {}
+    target = url
+    if get_settings().is_production:
+        parts = _checked_parts(url)
+        hostname, port = parts.hostname or "", parts.port or 443
+        address = _public_address(hostname, port)
+        host = f"[{address}]" if ":" in address else address
+        target = parts._replace(netloc=f"{host}:{port}").geturl()
+        headers["Host"] = parts.netloc.rsplit("@", 1)[-1]
+        extensions["sni_hostname"] = hostname
+    return _send(target, body, headers, extensions)
+
+
+def _send(url: str, body: bytes, headers: dict[str, str], extensions: dict) -> httpx.Response:
+    with httpx.Client(timeout=get_settings().webhook_timeout_seconds, follow_redirects=False) as client:
+        return client.post(url, content=body, headers=headers, extensions=extensions)
 
 
 def deliver(webhook_id: str, event: str, body: bytes) -> None:
@@ -67,19 +103,7 @@ def deliver(webhook_id: str, event: str, body: bytes) -> None:
             return
         delivery = WebhookDelivery(webhook_id=hook.id, event=event, ok=False)
         try:
-            validate_webhook_url(hook.url)  # again at send time: DNS may have changed since it was added
-            res = httpx.post(
-                hook.url,
-                content=body,
-                headers={
-                    "Content-Type": "application/json",
-                    "User-Agent": "FormPilot-Webhooks/1.0",
-                    "X-FormPilot-Event": event,
-                    "X-FormPilot-Signature": sign(hook.secret, body),
-                },
-                timeout=get_settings().webhook_timeout_seconds,
-                follow_redirects=False,
-            )
+            res = post_signed(hook.url, hook.secret, event, body)
             delivery.status_code = res.status_code
             delivery.ok = 200 <= res.status_code < 300
         except (httpx.HTTPError, InvalidWebhookUrl) as exc:

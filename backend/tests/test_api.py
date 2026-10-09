@@ -245,11 +245,11 @@ def test_production_requires_secrets():
 
 
 
-def test_password_minimum_is_six_characters(client):
-    base = {"full_name": "Six Chars", "email": "six@example.com"}
-    assert client.post("/api/auth/signup", json={**base, "password": "abc12"}).status_code == 422  # 5 chars
-    assert client.post("/api/auth/signup", json={**base, "password": "abcdef"}).status_code == 422  # no number
-    assert client.post("/api/auth/signup", json={**base, "password": "abc123"}).status_code == 201
+def test_password_minimum_is_eight_characters(client):
+    base = {"full_name": "Eight Chars", "email": "eight@example.com"}
+    assert client.post("/api/auth/signup", json={**base, "password": "abc1234"}).status_code == 422  # 7 chars
+    assert client.post("/api/auth/signup", json={**base, "password": "abcdefgh"}).status_code == 422  # no number
+    assert client.post("/api/auth/signup", json={**base, "password": "abc12345"}).status_code == 201
 
 
 def test_non_profile_document_gives_no_false_name(signed_in):

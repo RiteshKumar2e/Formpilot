@@ -307,11 +307,11 @@ def test_webhooks_fire_on_approval_with_a_signature(signed_in, monkeypatch):
     class FakeResponse:
         status_code = 200
 
-    def fake_post(url, content, headers, **kwargs):
+    def fake_send(url, content, headers, extensions):
         sent.append((url, content, headers))
         return FakeResponse()
 
-    monkeypatch.setattr(integrations.httpx, "post", fake_post)
+    monkeypatch.setattr(integrations, "_send", fake_send)
 
     hook = signed_in.post(
         "/api/integrations/webhooks", json={"url": "https://hooks.example.com/formpilot", "events": ["application.approved"]}

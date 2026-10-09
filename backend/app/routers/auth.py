@@ -17,7 +17,14 @@ from ..config import get_settings
 from ..database import get_db
 from ..deps import get_current_user, get_optional_user
 from ..models import OAuthAccount, PasswordResetToken, User
-from ..ratelimit import forgot_password_limit, reset_password_limit, signin_limit, signup_limit
+from ..ratelimit import (
+    forgot_password_email_limit,
+    forgot_password_limit,
+    reset_password_limit,
+    signin_account_limit,
+    signin_limit,
+    signup_limit,
+)
 from ..schemas import (
     ChangePasswordIn,
     ForgotPasswordIn,
@@ -84,8 +91,12 @@ def sign_up(payload: SignUpIn, response: Response, db: Session = Depends(get_db)
 
 @router.post("/signin", response_model=UserOut, dependencies=[Depends(signin_limit)])
 def sign_in(payload: SignInIn, response: Response, db: Session = Depends(get_db)) -> User:
+    account = f"signin:{payload.email.lower()}"
+    if signin_account_limit.exceeded(account):  # same answer for every address, existing or not
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many attempts. Please wait a moment and try again.", headers={"Retry-After": "900"})
     user = db.scalar(select(User).where(User.email == payload.email.lower()))
     if not verify_password(payload.password, user.password_hash if user else _DUMMY_HASH) or user is None:
+        signin_account_limit.record(account)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Email or password is incorrect.")
     _set_session(response, user, remember=payload.remember)
     return user
@@ -123,6 +134,10 @@ def forgot_password(payload: ForgotPasswordIn, db: Session = Depends(get_db)) ->
     user = db.scalar(select(User).where(User.email == payload.email.lower()))
     if user is None:
         return out
+    account = f"forgot:{user.email}"
+    if forgot_password_email_limit.exceeded(account):
+        return out  # enough links were sent recently; answer as usual so this reveals nothing
+    forgot_password_email_limit.record(account)
 
     token, token_hash = new_reset_token()
     db.add(
@@ -268,6 +283,12 @@ def _oauth_user(db: Session, subject: str, email: str, name: str) -> User:
         user = User(full_name=name[:200] or email.split("@")[0], email=email, password_hash="")
         db.add(user)
         db.flush()
+    elif user.password_hash:
+        # Emails aren't verified at sign-up, so whoever registered this address first may not be its owner.
+        # Google has now proved ownership: drop that password and sign out its sessions. The owner can set
+        # a password again with "Forgot password".
+        user.password_hash = ""
+        user.password_changed_at = datetime.now(timezone.utc).replace(microsecond=0)
     db.add(OAuthAccount(user_id=user.id, provider="google", subject=subject))
     db.commit()
     return user
