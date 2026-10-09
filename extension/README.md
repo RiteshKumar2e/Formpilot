@@ -54,6 +54,6 @@ The in-app **Use Anywhere** demo (`/anywhere`) imports the same `src/core` code.
 
 ## Settings (popup)
 
-- **FormPilot app address:** defaults to `http://localhost:5173`. For a deployed FormPilot, enter its address; the browser asks for permission to reach it.
+- **FormPilot app address:** defaults to the live app, `https://formpilot-six.vercel.app`. For local development, enter `http://localhost:5173` and save.
 - **Show the FormPilot button on pages with forms:** turn off to use FormPilot only from the popup.
 - **Hide on this site:** in the panel's footer.

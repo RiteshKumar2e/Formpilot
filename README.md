@@ -408,7 +408,7 @@ Found a security issue? Please email the address under [Contact](#contact) rathe
 
 - **Frontend:** any static host. [`vercel.json`](frontend/vercel.json), and [`_redirects`](frontend/public/_redirects) with [`_headers`](frontend/public/_headers) for Netlify, provide SPA routing, HSTS and asset caching.
 - **Backend:** any host that runs Python (Render, Railway, Fly.io, or a VM). Use Turso (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`), set the production variables above, and set `TRUST_PROXY_HEADERS=true` behind a proxy.
-- **Domain:** replace `https://formpilot.app` in `index.html`, `robots.txt`, `sitemap.xml` and `usePageMeta.ts` with your own.
+- **Live app:** https://formpilot-six.vercel.app (used in `index.html`, `robots.txt`, `sitemap.xml`, `usePageMeta.ts` and the extension's default address). To move to another domain, replace it in those files.
 - **Before launch:** the Privacy Policy and Terms of Service in the app are drafts. Their highlighted placeholders need the operator's legal name, address, hosting region, retention periods and governing law, followed by a legal review.
 
 ## Roadmap

@@ -14,4 +14,4 @@ Disallow: /settings
 Disallow: /reset-password
 Disallow: /api/
 
-Sitemap: https://formpilot.app/sitemap.xml
+Sitemap: https://formpilot-six.vercel.app/sitemap.xml

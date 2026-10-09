@@ -1,3 +1,2 @@
-# Netlify: force HTTPS on the primary domain, then serve the SPA for every route.
-http://formpilot.app/*  https://formpilot.app/:splat  301!
+# Netlify: serve the SPA for every route. (On Vercel, frontend/vercel.json does this.)
 /*  /index.html  200

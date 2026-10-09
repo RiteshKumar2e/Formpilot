@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 
-export const SITE_URL = 'https://formpilot.app'
+export const SITE_URL = 'https://formpilot-six.vercel.app'
 const DEFAULT_TITLE = 'FormPilot — One Profile. Every Application.'
 const DEFAULT_DESCRIPTION =
   'Your reusable application profile for the web. Build it once, verify it once, and fill forms on any website, with your review before anything is filled.'

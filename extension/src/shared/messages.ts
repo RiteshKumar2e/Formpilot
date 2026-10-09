@@ -57,5 +57,6 @@ export interface TabCommand {
 }
 
 // Settings kept in chrome.storage.local
-export const DEFAULT_APP_URL = 'http://localhost:5173'
+// The deployed FormPilot app. For local development, set http://localhost:5173 in the popup's settings.
+export const DEFAULT_APP_URL = 'https://formpilot-six.vercel.app'
 export const STORAGE = { token: 'fpToken', appUrl: 'fpAppUrl', showButton: 'fpShowButton', hiddenSites: 'fpHiddenSites' } as const

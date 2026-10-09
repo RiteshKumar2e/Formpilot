@@ -137,7 +137,7 @@ The first start takes a minute longer while the embedding model downloads.
 
 ## 5. Your own domain
 
-Replace `https://formpilot.app` with your domain in:
+The live frontend is `https://formpilot-six.vercel.app`. To use a different domain, replace that address in:
 - `frontend/index.html` (canonical URL, Open Graph tags)
 - `frontend/public/robots.txt` and `frontend/public/sitemap.xml`
 - `frontend/src/hooks/usePageMeta.ts`
