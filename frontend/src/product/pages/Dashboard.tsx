@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Archive,
-  Globe, AlertTriangle, ArrowRight, CheckCircle2, ClipboardList, FilePlus2, FileText, FileUp, UserRoundCheck } from 'lucide-react'
+  Globe, Trash2, AlertTriangle, ArrowRight, CheckCircle2, ClipboardList, FilePlus2, FileText, FileUp, UserRoundCheck } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import { useWorkspace } from '../workspace'
@@ -29,7 +29,7 @@ function Stat({ label, value, note, tone, to }: { label: string; value: string; 
 
 export function DashboardPage() {
   usePageMeta({ title: 'Overview', path: '/dashboard' })
-  const { data } = useWorkspace()
+  const { data, deleteApplication } = useWorkspace()
   if (!data) return null
 
   const completion = profileCompleteness(data.profile)
@@ -150,7 +150,7 @@ export function DashboardPage() {
                         <span className="w-10 text-right font-mono text-[12px] text-ink-2">{progress(app)}%</span>
                       </div>
                     </div>
-                    <div className="flex shrink-0 gap-2 md:w-[172px] md:justify-end">
+                    <div className="flex shrink-0 gap-2 md:w-[216px] md:justify-end">
                       <Button to={`/applications/${app.id}`} variant="secondary" size="sm">
                         Open
                       </Button>
@@ -163,6 +163,17 @@ export function DashboardPage() {
                           Review
                         </Button>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm(`Delete "${app.title}"? This can't be undone.`)) deleteApplication(app.id)
+                        }}
+                        className="inline-flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-line text-subtle hover:border-danger hover:bg-danger-soft hover:text-danger"
+                        aria-label={`Delete ${app.title}`}
+                        title="Delete application"
+                      >
+                        <Trash2 className="size-4" aria-hidden />
+                      </button>
                     </div>
                   </li>
                 )
