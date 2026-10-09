@@ -4,3 +4,4 @@ __pycache__/
 *.db
 storage/
 .pytest_cache/
+qdrant_data/

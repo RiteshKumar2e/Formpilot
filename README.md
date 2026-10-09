@@ -12,7 +12,7 @@ Instead of typing the same information into every website, you create your verif
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-0e0e62?logo=typescript&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-0e0e62?logo=tailwindcss&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Python_3.10+-0e0e62?logo=fastapi&logoColor=white)
-![Tests](https://img.shields.io/badge/backend_tests-70_passing-1f7a4d)
+![Tests](https://img.shields.io/badge/backend_tests-72_passing-1f7a4d)
 ![License: MIT](https://img.shields.io/badge/license-MIT-ffc72c)
 
 </div>
@@ -60,7 +60,7 @@ Students, job seekers and professionals type the same facts into portal after po
 | **Document extraction** | Reads PDFs (and scanned images when OCR is enabled). Pattern rules and an LLM on Groq extract name, contact details, date of birth, degree, institution, graduation year, experience, skills and profile links, each with a confidence score. Every LLM value must appear in the document or it is discarded. |
 | **Reusable profile** | Merges details from all your documents into one profile. Every value lists the documents it came from. |
 | **Conflict detection** | When two documents disagree (for example, two different dates of birth), FormPilot shows both values with their sources and asks you to choose. Your choice is saved and applied everywhere. |
-| **Semantic field mapping (RAG)** | Matches form labels to your details by wording and by meaning (local embeddings), retrieves the most relevant passages from your documents from Turso's vector search, and lets the LLM choose each answer. Answers must trace back to your profile or a passage. |
+| **Semantic field mapping (RAG)** | Matches form labels to your details by wording and by meaning (local embeddings), retrieves the most relevant passages from your documents from the Qdrant vector database, and lets the LLM choose each answer. Answers must trace back to your profile or a passage. |
 | **Validation** | Before approval, every application is checked for conflicts, missing required fields and low-confidence matches, each with a one-click fix. |
 | **Human approval** | You review every answer and approve explicitly. FormPilot never submits anything; approval marks an application *Ready for Submission*. |
 | **Workflow engine** | Every document and form runs through recorded steps (read, extract, validate, index; retrieve, classify, generate, validate), visible in the app and the API. |
@@ -79,7 +79,7 @@ Real captures of the app with sample documents. Mobile versions are in [`fronten
 ```mermaid
 flowchart LR
     A[Upload documents] --> B[Extract: rules + LLM]
-    B --> V[(Turso: encrypted data + vectors)]
+    B --> V[(Qdrant: passage vectors)]
     B --> C[Build profile]
     C --> D{Documents agree?}
     D -- No --> E[You choose the value]
@@ -93,9 +93,9 @@ flowchart LR
 
 1. **Upload.** PDF, JPG or PNG up to 10 MB. The file type is checked from its bytes, and the file is encrypted before it is written to disk.
 2. **Extract.** The PDF text layer (or OCR text) is parsed by pattern rules and, when `GROQ_API_KEY` is set, by an LLM with a strict JSON schema. Results are merged field by field: agreement raises confidence, disagreement lowers it so you check, and any LLM value that can't be found in the document is dropped. Ambiguous values, such as `12/05/2003`, are flagged for review.
-3. **Index.** The text is split into passages, embedded locally with `BAAI/bge-small-en-v1.5` (fastembed), and stored in Turso as `F32_BLOB` vectors.
+3. **Index.** The text is split into passages, embedded locally with `BAAI/bge-small-en-v1.5` (fastembed), and stored in Qdrant, the vector database, with the passage text encrypted.
 4. **Build the profile.** Values from all documents are merged. Identical values list every source; different values become a conflict.
-5. **Map (RAG).** Each form label is classified by wording (token and trigram overlap), then by meaning (embedding similarity) if wording fails. The label is embedded and the closest passages are retrieved with `vector_distance_cos`. The LLM sees the profile plus those passages and picks each answer; FormPilot accepts an answer only if it equals a profile value or appears in a retrieved passage. Conflicted fields are never filled.
+5. **Map (RAG).** Each form label is classified by wording (token and trigram overlap), then by meaning (embedding similarity) if wording fails. The label is embedded and the closest passages are retrieved from Qdrant, filtered to your own documents. The LLM sees the profile plus those passages and picks each answer; FormPilot accepts an answer only if it equals a profile value or appears in a retrieved passage. Conflicted fields are never filled.
 6. **Validate and approve.** Conflicts and missing required fields block approval until resolved. Optional fields (such as GitHub) never block.
 
 Without a Groq key, steps 2 and 5 run without the LLM: rules, embeddings and retrieval still work.
@@ -107,7 +107,7 @@ Without a Groq key, steps 2 and 5 run without the LLM: rules, embeddings and ret
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS 4, React Router 7, Framer Motion, Lucide icons |
 | Backend | Python 3.10+, FastAPI, SQLAlchemy 2, Pydantic 2 |
 | AI / ML | LLM on Groq (`openai/gpt-oss-120b`, strict JSON schema), local embeddings (fastembed, `bge-small-en-v1.5`), semantic search and RAG |
-| Database | Turso (libSQL) with native vector search; a local libSQL file in development |
+| Database | PostgreSQL for app data in production, a SQLite file in development; Qdrant vector database for embeddings (Qdrant Cloud, or embedded in a local folder) |
 | Documents | pypdf for text extraction, optional Tesseract OCR |
 | Automation | Workflow engine with recorded steps, signed webhooks, autofill API |
 | Auth & security | scrypt passwords, JWT session in an httpOnly cookie, Sign in with Google (OAuth 2.0 + PKCE), Fernet encryption of files and personal data |
@@ -132,7 +132,7 @@ cd Formpilot
 ```bash
 cd backend
 pip install -r requirements.txt
-cp .env.example .env                 # then add your Turso and Groq keys (both optional locally)
+cp .env.example .env                 # then add your Groq key (optional locally)
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -167,15 +167,13 @@ pip install -r requirements-ocr.txt
 
 Also install the [Tesseract](https://github.com/tesseract-ocr/tesseract) binary. Without it, images upload successfully but are marked *needs review* with no details extracted.
 
-### Turso database
+### Database
 
-```bash
-turso db create formpilot
-turso db show formpilot --url          # -> TURSO_DATABASE_URL
-turso db tokens create formpilot       # -> TURSO_AUTH_TOKEN
-```
+Locally, app data lives in a SQLite file (`backend/formpilot.db`); nothing to set up. In production, point `DATABASE_URL` at PostgreSQL, e.g. `postgresql+psycopg://user:password@host:5432/formpilot`. Tables are created on first start.
 
-Put both in `backend/.env`. Tables are created on first start. Without them, the backend uses a local libSQL file (`formpilot.db`) with the same engine and vector search.
+### Qdrant vector database
+
+Embeddings for semantic search live in Qdrant. Locally nothing is needed: Qdrant runs inside the backend and keeps its data in `backend/qdrant_data`. For production, create a free cluster at https://cloud.qdrant.io and set `QDRANT_URL` and `QDRANT_API_KEY`. Passages stored in the database by older versions move to Qdrant automatically on the next start.
 
 ### Groq LLM
 
@@ -190,9 +188,10 @@ Create a key at [console.groq.com/keys](https://console.groq.com/keys) and set `
 | `ENVIRONMENT` | `development` | Set to `production` to enforce production checks. |
 | `SECRET_KEY` | dev-only key | Signs session tokens. **Required in production.** |
 | `FILE_ENCRYPTION_KEY` | derived in dev | Fernet key for encrypting uploads and personal data in the database. **Required in production.** |
-| `TURSO_DATABASE_URL` | empty | Turso database, e.g. `libsql://formpilot-<org>.turso.io`. Takes priority over `DATABASE_URL`. |
-| `TURSO_AUTH_TOKEN` | empty | Token from `turso db tokens create`. |
-| `DATABASE_URL` | `sqlite+libsql:///./formpilot.db` | Local libSQL file, used when Turso isn't configured. |
+| `DATABASE_URL` | `sqlite:///./formpilot.db` | SQLite file locally; PostgreSQL in production (`postgresql+psycopg://...`). |
+| `QDRANT_URL`, `QDRANT_API_KEY` | empty | Qdrant server or Qdrant Cloud cluster for embeddings. Empty = Qdrant embedded in the backend. |
+| `QDRANT_PATH` | `./qdrant_data` | Where embedded Qdrant keeps its data (`:memory:` in tests). |
+| `QDRANT_COLLECTION` | `formpilot_passages` | Collection holding the passage vectors. |
 | `STORAGE_DIR` | `./storage` | Where encrypted uploads are stored. |
 | `GROQ_API_KEY` | empty | Enables LLM extraction and RAG answers. Empty = rules and embeddings only. |
 | `LLM_MODEL` | `openai/gpt-oss-120b` | A Groq model that supports strict JSON-schema output. |
@@ -315,9 +314,8 @@ Formpilot/
 │   ├── app/
 │   │   ├── main.py              # App setup, CORS, security headers, HTTPS redirect
 │   │   ├── config.py            # Settings from environment, production checks
-│   │   ├── database.py          # Engine: Turso, local libSQL or SQLite
-│   │   ├── libsql_dialect.py    # SQLAlchemy dialect for libSQL
-│   │   ├── db_types.py          # Encrypted text/JSON columns, F32_BLOB vectors
+│   │   ├── database.py          # Engine: SQLite locally, PostgreSQL in production
+│   │   ├── db_types.py          # Encrypted text/JSON columns
 │   │   ├── models.py            # SQLAlchemy models
 │   │   ├── schemas.py           # Pydantic request and response schemas
 │   │   ├── security.py          # scrypt hashing, JWT sessions, encryption
@@ -329,7 +327,7 @@ Formpilot/
 │   │       ├── extraction.py    # PDF/OCR text, rule extraction, merging with the LLM
 │   │       ├── llm.py           # Groq calls with strict JSON schemas
 │   │       ├── embeddings.py    # Local embeddings (fastembed) and the hash fallback
-│   │       ├── vectorstore.py   # Passages and vector search in Turso
+│   │       ├── vectorstore.py   # Passages and vector search in Qdrant
 │   │       ├── rag.py           # Form mapping: retrieve, classify, generate, validate
 │   │       ├── mapping.py       # Label classification by wording and by meaning
 │   │       ├── workflow.py      # Workflow engine with recorded steps
@@ -361,7 +359,7 @@ Formpilot/
 ## Testing
 
 ```bash
-# Backend: 70 tests covering auth, remember me, password reset and change, Google OAuth, the extension's
+# Backend: 72 tests covering auth, remember me, password reset and change, Google OAuth, the extension's
 # scoped token, form semantics on unseen forms, uploads, extraction, the Master Profile, LLM grounding,
 # RAG mapping, Smart Answers, templates, the extension autofill API, vector search, workflows,
 # webhooks, applications, encryption at rest, rate limits and HTTPS.
@@ -407,7 +405,7 @@ Found a security issue? Please email the address under [Contact](#contact) rathe
 ## Deployment
 
 - **Frontend:** any static host. [`vercel.json`](frontend/vercel.json), and [`_redirects`](frontend/public/_redirects) with [`_headers`](frontend/public/_headers) for Netlify, provide SPA routing, HSTS and asset caching.
-- **Backend:** any host that runs Python (Render, Railway, Fly.io, or a VM). Use Turso (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`), set the production variables above, and set `TRUST_PROXY_HEADERS=true` behind a proxy.
+- **Backend:** any host that runs Python (Render, Railway, Fly.io, or a VM). Use PostgreSQL (`DATABASE_URL`) and Qdrant Cloud (`QDRANT_URL`, `QDRANT_API_KEY`), set the production variables above, and set `TRUST_PROXY_HEADERS=true` behind a proxy.
 - **Live app:** https://formpilot-six.vercel.app (used in `index.html`, `robots.txt`, `sitemap.xml`, `usePageMeta.ts` and the extension's default address). To move to another domain, replace it in those files.
 - **Before launch:** the Privacy Policy and Terms of Service in the app are drafts. Their highlighted placeholders need the operator's legal name, address, hosting region, retention periods and governing law, followed by a legal review.
 

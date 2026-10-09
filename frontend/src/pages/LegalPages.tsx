@@ -72,7 +72,7 @@ export function PrivacyPage() {
             FormPilot to fill and the relevant parts of your profile are sent to Groq to extract details and suggest answers.
           </li>
           <li>
-            <strong>Turso</strong> (database): stores your account, profile and the encrypted details described below.
+            <strong>Database and vector database</strong> (<Todo>PostgreSQL provider</Todo>, Qdrant): store your account, profile and the encrypted details described below.
           </li>
           <li>
             <strong>Email provider</strong> (<Todo>for example Google Gmail</Todo>): delivers password reset emails.

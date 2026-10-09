@@ -13,11 +13,9 @@ class Settings(BaseSettings):
     environment: str = "development"
     secret_key: str = ""
     file_encryption_key: str = ""
-    # Local development uses a libSQL file (same engine as Turso, including vector search).
-    database_url: str = "sqlite+libsql:///./formpilot.db"
-    # Turso: when set, the app uses this remote database instead of DATABASE_URL.
-    turso_database_url: str = ""
-    turso_auth_token: str = ""
+    # App data. A SQLite file for local development; PostgreSQL in production, e.g.
+    # postgresql+psycopg://user:password@host:5432/formpilot
+    database_url: str = "sqlite:///./formpilot.db"
     storage_dir: str = "./storage"
     cors_origins: str = "http://localhost:5173"
     cookie_secure: bool = False
@@ -53,6 +51,14 @@ class Settings(BaseSettings):
     embedding_provider: str = "fastembed"
     embedding_model: str = "BAAI/bge-small-en-v1.5"
     rag_top_k: int = 4
+
+    # --- Vector database: Qdrant ---
+    # QDRANT_URL set: a Qdrant server or Qdrant Cloud cluster. Empty: Qdrant runs inside the backend
+    # and keeps its data in QDRANT_PATH (":memory:" keeps it in memory, as the tests do).
+    qdrant_url: str = ""
+    qdrant_api_key: str = ""
+    qdrant_path: str = "./qdrant_data"
+    qdrant_collection: str = "formpilot_passages"
 
     # --- Sign in with Google (OAuth 2.0 / OpenID Connect) ---
     google_client_id: str = ""

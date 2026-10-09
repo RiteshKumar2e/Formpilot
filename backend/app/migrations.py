@@ -9,9 +9,10 @@ from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 
 ADDED_COLUMNS: dict[str, dict[str, str]] = {
-    "profile_choices": {"updated_at": "DATETIME"},
-    "users": {"password_changed_at": "DATETIME"},
+    "profile_choices": {"updated_at": "datetime"},
+    "users": {"password_changed_at": "datetime"},
 }
+SQL_TYPES = {"postgresql": {"datetime": "TIMESTAMP WITH TIME ZONE"}, "sqlite": {"datetime": "DATETIME"}}
 
 
 def upgrade(engine: Engine) -> None:
@@ -24,4 +25,4 @@ def upgrade(engine: Engine) -> None:
             existing = {c["name"] for c in inspector.get_columns(table)}
             for name, sql_type in columns.items():
                 if name not in existing:
-                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {sql_type}"))
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {SQL_TYPES.get(engine.dialect.name, {}).get(sql_type, sql_type.upper())}"))

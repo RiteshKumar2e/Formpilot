@@ -1,16 +1,15 @@
-"""Column types for encrypted user data and embeddings."""
+"""Column types for encrypted user data."""
 
 import json
 from typing import Any
 
-import numpy as np
 from cryptography.fernet import InvalidToken
 from sqlalchemy import Text
-from sqlalchemy.types import TypeDecorator, UserDefinedType
+from sqlalchemy.types import TypeDecorator
 
 from .security import file_cipher
 
-EMBEDDING_DIM = 384
+EMBEDDING_DIM = 384  # size of the vectors stored in Qdrant (bge-small-en-v1.5)
 
 
 class EncryptedText(TypeDecorator):
@@ -45,26 +44,3 @@ class EncryptedJSON(TypeDecorator):
 
     def process_result_value(self, value: str | None, dialect) -> Any:
         return None if value is None else json.loads(value)
-
-
-class F32Blob(UserDefinedType):
-    """libSQL's native vector column, F32_BLOB(n): packed little-endian float32 values.
-
-    Plain SQLite accepts the type name too and stores the same bytes as a BLOB.
-    """
-
-    cache_ok = True
-
-    def get_col_spec(self, **kw) -> str:
-        return f"F32_BLOB({EMBEDDING_DIM})"
-
-
-class Embedding(TypeDecorator):
-    impl = F32Blob
-    cache_ok = True
-
-    def process_bind_param(self, value, dialect):
-        return None if value is None else np.asarray(value, dtype="<f4").tobytes()
-
-    def process_result_value(self, value, dialect):
-        return None if value is None else np.frombuffer(value, dtype="<f4")

@@ -27,7 +27,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT.parent))
-os.environ.setdefault("DATABASE_URL", "sqlite+libsql:///:memory:")
+os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
 from app.config import get_settings  # noqa: E402
 from app.services.embeddings import get_embedder  # noqa: E402

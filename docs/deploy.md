@@ -1,10 +1,11 @@
 # Deploying FormPilot
 
-FormPilot has four parts to deploy:
+FormPilot has five parts to deploy:
 
 | Part | What it is | Where it runs |
 | --- | --- | --- |
-| Database | Turso (libSQL) with vector search | Turso cloud |
+| Database | PostgreSQL for app data | Neon, Supabase, Render Postgres or Railway Postgres |
+| Vector database | Qdrant, for document embeddings (RAG) | Qdrant Cloud |
 | Backend | FastAPI (`backend/`) | Any Python host with a persistent disk: Render, Railway, Fly.io, or a VM |
 | Frontend | React static site (`frontend/`) | Vercel or Netlify |
 | Extension | Chrome/Edge extension (`extension/`) | Users' browsers (load unpacked, or the Chrome Web Store) |
@@ -13,7 +14,8 @@ FormPilot has four parts to deploy:
 Browser ──► https://your-app.com            (static frontend on Vercel/Netlify)
               │  /api/*  rewritten to ──►  https://your-api.onrender.com/api/*   (FastAPI)
               │                                     │
-Extension ────┘                                     ├──► Turso (data + vectors)
+Extension ────┘                                     ├──► PostgreSQL (app data)
+                                                    ├──► Qdrant (vectors)
                                                     ├──► Groq (LLM)
                                                     ├──► Gmail SMTP (reset emails)
                                                     └──► persistent disk (encrypted uploads)
@@ -23,17 +25,25 @@ Extension ────┘                                     ├──► Turso
 
 ---
 
-## 1. Database: Turso
+## 1. Database: PostgreSQL
 
-```bash
-# Install the CLI: https://docs.turso.tech/cli/installation
-turso auth login
-turso db create formpilot
-turso db show formpilot --url        # → TURSO_DATABASE_URL  (libsql://formpilot-<org>.turso.io)
-turso db tokens create formpilot     # → TURSO_AUTH_TOKEN
+Create a PostgreSQL database on any provider (Neon and Supabase have free tiers; Render and Railway offer one next to the backend) and copy its connection string. Use the `postgresql+psycopg://` prefix:
+
+```env
+DATABASE_URL=postgresql+psycopg://user:password@host:5432/formpilot
 ```
 
+If the provider requires SSL, append `?sslmode=require`.
+
 Tables are created on the backend's first start, and new columns are added by `app/migrations.py`. No manual migration is needed.
+
+## 1b. Vector database: Qdrant Cloud
+
+1. Create a free cluster at https://cloud.qdrant.io.
+2. Copy its URL (`https://<id>.<region>.cloud.qdrant.io:6333`) → `QDRANT_URL`.
+3. Create an API key → `QDRANT_API_KEY`.
+
+The `formpilot_passages` collection is created on the backend's first start. Without `QDRANT_URL`, Qdrant runs inside the backend and stores its data in `QDRANT_PATH`; put that on the persistent disk (`/var/data/qdrant`) and run a single instance.
 
 ## 2. Secrets
 
@@ -74,8 +84,10 @@ Railway and Fly.io work the same way: a Python web service plus a persistent vol
    SECRET_KEY=<generated>
    FILE_ENCRYPTION_KEY=<generated>
 
-   TURSO_DATABASE_URL=libsql://formpilot-<org>.turso.io
-   TURSO_AUTH_TOKEN=<token>
+   DATABASE_URL=postgresql+psycopg://user:password@host:5432/formpilot
+
+   QDRANT_URL=https://<id>.<region>.cloud.qdrant.io:6333
+   QDRANT_API_KEY=<key>
 
    STORAGE_DIR=/var/data/storage
    FASTEMBED_CACHE_PATH=/var/data/fastembed      # embedding model is downloaded once (~70 MB) and kept
@@ -166,7 +178,7 @@ Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` on the backend. The **Continue
 
 - [ ] `https://your-app.com/api/health` returns `{"status":"ok"}` (through the frontend's proxy).
 - [ ] Sign up, sign out, sign in with **Remember me**, and reload: you stay signed in.
-- [ ] Upload a resume: it's processed, and **Settings → AI engine** shows Groq active, semantic search on, and "Turso (libSQL, remote)".
+- [ ] Upload a resume: it's processed, and **Settings → AI engine** shows Groq active, semantic search on, and "PostgreSQL" with "Qdrant (server / cloud)".
 - [ ] **Forgot password** sends an email, the link opens the reset page, and after the reset you sign in with the new password.
 - [ ] Open **Use Anywhere**: CareerHub fields are detected and filled.
 - [ ] Extension: connect it from `/extension`, open any site with a form, and Autofill.
@@ -175,9 +187,9 @@ Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` on the backend. The **Continue
 ## 9. Before a public launch
 
 - The Privacy Policy and Terms in the app are drafts. Fill in the highlighted placeholders (operator's legal name, address, hosting region, retention periods, governing law) and have them reviewed.
-- Back up the Turso database (`turso db shell formpilot .dump > backup.sql`) and the storage disk.
+- Back up the PostgreSQL database (`pg_dump`, or your provider's backups) and the storage disk.
 - Rate limits live in one process. If you run more than one backend instance, move them to Redis first.
-- Rotate any key that was ever shared in chat or committed by mistake (Groq, Resend, SMTP, Turso tokens).
+- Rotate any key that was ever shared in chat or committed by mistake (Groq, Resend, SMTP, database, Qdrant).
 
 ## Troubleshooting
 

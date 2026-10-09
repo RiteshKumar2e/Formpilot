@@ -7,6 +7,7 @@ from fastapi.responses import RedirectResponse
 from .config import get_settings
 from . import migrations
 from .database import Base, engine
+from .services import vectorstore
 from .routers import applications, auth, contact, documents, extension, integrations, profile, system, vault
 
 settings = get_settings()
@@ -17,7 +18,9 @@ settings.validate_for_production()
 async def lifespan(_app: FastAPI):
     migrations.upgrade(engine)  # adds columns introduced after a database was created
     Base.metadata.create_all(bind=engine)
+    vectorstore.migrate_from_database(engine)  # passages stored in the database by earlier versions
     yield
+    vectorstore.close()
 
 
 app = FastAPI(

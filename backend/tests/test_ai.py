@@ -33,11 +33,16 @@ def fake_llm(monkeypatch):
 # --- Encryption at rest ---------------------------------------------------------------------
 
 
-def test_extracted_values_and_passages_are_encrypted_in_the_database(signed_in):
-    upload(signed_in, "Resume.pdf", RESUME_LINES)
+def test_extracted_values_and_passages_are_encrypted_at_rest(signed_in):
+    from app.services import vectorstore
+
+    doc = upload(signed_in, "Resume.pdf", RESUME_LINES).json()
     with SessionLocal() as db:
         values = [r[0] for r in db.execute(text("SELECT value FROM extracted_fields"))]
-        passages = [r[0] for r in db.execute(text("SELECT text FROM document_chunks"))]
+    points, _ = vectorstore.client().scroll(
+        vectorstore._collection(), scroll_filter=vectorstore.models.Filter(must=[vectorstore._match("document_id", doc["id"])]), with_payload=True
+    )
+    passages = [p.payload["text"] for p in points]
     assert values and passages
     assert not any("ritesh@example.com" in v for v in values)
     assert not any("Ritesh" in p for p in passages)
@@ -74,6 +79,52 @@ def test_search_is_scoped_to_the_user(client, signed_in):
     other = client.get("/api/auth/me").json()
     with SessionLocal() as db:
         assert search(db, other["id"], ["Python"], k=3) == [[]]
+
+
+def test_deleting_a_document_removes_its_vectors(signed_in):
+    from app.services.vectorstore import search
+
+    doc = upload(signed_in, "Resume.pdf", RESUME_LINES).json()
+    me = signed_in.get("/api/auth/me").json()
+    with SessionLocal() as db:
+        assert search(db, me["id"], ["Python skills"], k=3)[0]
+    assert signed_in.delete(f"/api/documents/{doc['id']}").status_code == 204
+    with SessionLocal() as db:
+        assert search(db, me["id"], ["Python skills"], k=3) == [[]]
+
+
+def test_passages_move_from_the_old_database_table(signed_in):
+    """Earlier versions kept vectors in a `document_chunks` table; they move to Qdrant once."""
+    import numpy as np
+
+    from app.database import engine
+    from app.security import file_cipher
+    from app.services import vectorstore
+    from app.services.embeddings import get_embedder
+
+    doc = upload(signed_in, "Resume.pdf", RESUME_LINES).json()
+    vectorstore.delete_document(doc["id"])
+    me = signed_in.get("/api/auth/me").json()
+    passage = "Skills: Python, React, FastAPI, Machine Learning"
+    vector = get_embedder().embed([passage])[0].astype("<f4").tobytes()
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                "CREATE TABLE IF NOT EXISTS document_chunks (id INTEGER PRIMARY KEY, document_id TEXT, user_id TEXT, "
+                "position INTEGER, text TEXT, embedder TEXT, embedding BLOB)"
+            )
+        )
+        conn.execute(
+            text("INSERT INTO document_chunks (document_id, user_id, position, text, embedder, embedding) VALUES (:d, :u, 0, :t, :e, :v)"),
+            {"d": doc["id"], "u": me["id"], "t": file_cipher().encrypt(passage.encode()).decode(), "e": get_embedder().name, "v": vector},
+        )
+    assert vectorstore.migrate_from_database(engine) == 1
+    with SessionLocal() as db:
+        hits = vectorstore.search(db, me["id"], ["Python"], k=1)[0]
+    assert hits and hits[0].text == passage and hits[0].source_filename == "Resume.pdf"
+    with engine.begin() as conn:
+        assert conn.execute(text("SELECT COUNT(*) FROM document_chunks")).scalar() == 0
+    assert np.isfinite(hits[0].score)
 
 
 # --- Workflow engine -------------------------------------------------------------------------
@@ -377,6 +428,6 @@ def test_google_callback_rejects_bad_state_and_unverified_email(client, google, 
 def test_capabilities(signed_in):
     caps = signed_in.get("/api/system/capabilities").json()
     assert caps["llm"] == {"enabled": False, "provider": "Groq", "model": "openai/gpt-oss-120b"}
-    assert caps["database"] == "libSQL (local file)"
-    assert caps["vector_store"].startswith("libSQL native vectors")
+    assert caps["database"] == "SQLite (local file)"
+    assert caps["vector_store"] == "Qdrant (in-memory)"
     assert caps["embeddings"]["semantic"] is False

@@ -6,7 +6,7 @@ from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Te
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
-from .db_types import Embedding, EncryptedJSON, EncryptedText
+from .db_types import EncryptedJSON, EncryptedText
 
 
 def _uuid() -> str:
@@ -98,7 +98,6 @@ class Document(Base):
 
     user: Mapped[User] = relationship(back_populates="documents")
     fields: Mapped[list["ExtractedField"]] = relationship(back_populates="document", cascade="all, delete-orphan")
-    chunks: Mapped[list["DocumentChunk"]] = relationship(cascade="all, delete-orphan")
 
 
 class ExtractedField(Base):
@@ -113,21 +112,6 @@ class ExtractedField(Base):
     confidence: Mapped[float] = mapped_column(Float)
 
     document: Mapped[Document] = relationship(back_populates="fields")
-
-
-class DocumentChunk(Base):
-    """A passage of a document and its embedding: the vector index used for retrieval (RAG)."""
-
-    __tablename__ = "document_chunks"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), index=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    position: Mapped[int] = mapped_column(Integer)
-    text: Mapped[str] = mapped_column(EncryptedText)
-    # Which embedding model produced the vector; vectors from different models aren't comparable.
-    embedder: Mapped[str] = mapped_column(String(100))
-    embedding: Mapped[Any] = mapped_column(Embedding)
 
 
 class ProfileChoice(Base):

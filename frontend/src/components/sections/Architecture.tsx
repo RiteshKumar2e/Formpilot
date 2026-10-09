@@ -50,7 +50,7 @@ export function Architecture() {
           </div>
           <Stack>
             <Down />
-            <Node title="RAG / Vector DB" note="Embeddings in Turso, passage retrieval" />
+            <Node title="RAG / Vector DB" note="Qdrant vector database, passage retrieval" />
             <Down />
             <Node title="Semantic Mapping" note="Wording + meaning, LLM answers checked against sources" />
             <Down />

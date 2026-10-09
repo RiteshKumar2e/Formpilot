@@ -10,7 +10,7 @@ from ..deps import get_current_user
 from ..models import Document, User
 from ..ratelimit import upload_limit
 from ..schemas import DocumentOut
-from ..services import storage
+from ..services import storage, vectorstore
 from ..services.ingest import ingest_document
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -94,6 +94,7 @@ def download_document(document_id: str, user: User = Depends(get_current_user), 
 def delete_document(document_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Response:
     doc = _owned_document(db, user, document_id)
     storage.delete(doc.storage_key)
+    vectorstore.delete_document(doc.id)
     db.delete(doc)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -92,7 +92,7 @@
     <p>The React app only ever calls the FastAPI backend. The backend owns every outside connection, so keys and passwords never reach the browser.</p>
     <figure>
       <div class="scroll">
-        <svg viewBox="0 0 960 400" role="img" aria-label="The web app calls the FastAPI backend with a session cookie and the browser extension calls it with a scoped token; the backend talks to Turso, encrypted file storage, Groq, Gmail SMTP and your webhooks.">
+        <svg viewBox="0 0 960 400" role="img" aria-label="The web app calls the FastAPI backend with a session cookie and the browser extension calls it with a scoped token; the backend talks to its database, Qdrant, encrypted file storage, Groq, Gmail SMTP and your webhooks.">
           <defs>
             <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="head"/></marker>
           </defs>
@@ -133,34 +133,39 @@
           <text class="s" x="415" y="358" text-anchor="middle">runs inside the backend</text>
 
           <g class="n"><rect x="650" y="26" width="290" height="46" rx="8"/></g>
-          <text class="t" x="666" y="45">Turso / libSQL</text>
-          <text class="s" x="666" y="62">encrypted rows + F32_BLOB vectors</text>
-          <g class="n"><rect x="650" y="100" width="290" height="46" rx="8"/></g>
-          <text class="t" x="666" y="119">Encrypted file storage</text>
-          <text class="s" x="666" y="136">original uploads (Fernet)</text>
-          <g class="n opt"><rect x="650" y="174" width="290" height="46" rx="8"/></g>
-          <text class="t" x="666" y="193">Groq LLM</text>
-          <text class="s" x="666" y="210">openai/gpt-oss-120b · strict JSON</text>
-          <g class="n"><rect x="650" y="248" width="290" height="46" rx="8"/></g>
-          <text class="t" x="666" y="267">Gmail SMTP</text>
-          <text class="s" x="666" y="284">password reset emails</text>
-          <g class="n opt"><rect x="650" y="322" width="290" height="46" rx="8"/></g>
-          <text class="t" x="666" y="341">Your webhooks</text>
-          <text class="s" x="666" y="358">document and application events</text>
+          <text class="t" x="666" y="45">PostgreSQL / SQLite</text>
+          <text class="s" x="666" y="62">encrypted app data</text>
+          <g class="n"><rect x="650" y="88" width="290" height="46" rx="8"/></g>
+          <text class="t" x="666" y="107">Qdrant</text>
+          <text class="s" x="666" y="124">vector database: passage embeddings</text>
+          <g class="n"><rect x="650" y="150" width="290" height="46" rx="8"/></g>
+          <text class="t" x="666" y="169">Encrypted file storage</text>
+          <text class="s" x="666" y="186">original uploads (Fernet)</text>
+          <g class="n opt"><rect x="650" y="212" width="290" height="46" rx="8"/></g>
+          <text class="t" x="666" y="231">Groq LLM</text>
+          <text class="s" x="666" y="248">openai/gpt-oss-120b · strict JSON</text>
+          <g class="n"><rect x="650" y="274" width="290" height="46" rx="8"/></g>
+          <text class="t" x="666" y="293">Gmail SMTP</text>
+          <text class="s" x="666" y="310">password reset emails</text>
+          <g class="n opt"><rect x="650" y="336" width="290" height="46" rx="8"/></g>
+          <text class="t" x="666" y="355">Your webhooks</text>
+          <text class="s" x="666" y="372">document and application events</text>
 
           <line class="a" x1="530" y1="49" x2="646" y2="49" marker-end="url(#ar1)"/>
-          <text class="lab" x="588" y="42" text-anchor="middle">SQL + vector search</text>
-          <line class="a" x1="530" y1="123" x2="646" y2="123" marker-end="url(#ar1)"/>
-          <text class="lab" x="588" y="116" text-anchor="middle">encrypt / decrypt</text>
-          <line class="a dash" x1="530" y1="197" x2="646" y2="197" marker-end="url(#ar1)"/>
-          <text class="lab" x="588" y="190" text-anchor="middle">extract · map · answer</text>
-          <line class="a" x1="530" y1="271" x2="646" y2="271" marker-end="url(#ar1)"/>
-          <text class="lab" x="588" y="264" text-anchor="middle">SMTP 587</text>
-          <line class="a dash" x1="530" y1="345" x2="646" y2="345" marker-end="url(#ar1)"/>
-          <text class="lab" x="588" y="338" text-anchor="middle">HMAC-signed POST</text>
+          <text class="lab" x="588" y="42" text-anchor="middle">SQL</text>
+          <line class="a" x1="530" y1="111" x2="646" y2="111" marker-end="url(#ar1)"/>
+          <text class="lab" x="588" y="104" text-anchor="middle">vector search</text>
+          <line class="a" x1="530" y1="173" x2="646" y2="173" marker-end="url(#ar1)"/>
+          <text class="lab" x="588" y="166" text-anchor="middle">encrypt / decrypt</text>
+          <line class="a dash" x1="530" y1="235" x2="646" y2="235" marker-end="url(#ar1)"/>
+          <text class="lab" x="588" y="228" text-anchor="middle">extract · map · answer</text>
+          <line class="a" x1="530" y1="297" x2="646" y2="297" marker-end="url(#ar1)"/>
+          <text class="lab" x="588" y="290" text-anchor="middle">SMTP 587</text>
+          <line class="a dash" x1="530" y1="359" x2="646" y2="359" marker-end="url(#ar1)"/>
+          <text class="lab" x="588" y="352" text-anchor="middle">HMAC-signed POST</text>
         </svg>
       </div>
-      <figcaption>The extension never holds a password or API key: the web app gives it a token that only reaches autofill, the profile, documents and Smart Answers, and stops working when you disconnect or change your password. Without a Groq key FormPilot still works: pattern rules and local embeddings take over. Without Turso settings it uses a local libSQL file with the same vector search.</figcaption>
+      <figcaption>The extension never holds a password or API key: the web app gives it a token that only reaches autofill, the profile, documents and Smart Answers, and stops working when you disconnect or change your password. Without a Groq key FormPilot still works: pattern rules and local embeddings take over. Locally app data is a SQLite file (PostgreSQL in production), and without a Qdrant URL Qdrant runs inside the backend from a local folder.</figcaption>
     </figure>
   </section>
 
@@ -222,7 +227,7 @@
     <p>Each upload runs through five recorded steps. The names in code font are the step names you see under Documents → Processing pipeline.</p>
     <figure>
       <div class="scroll">
-        <svg viewBox="0 0 960 280" role="img" aria-label="An upload is read, extracted by pattern rules and optionally by the LLM, checked for confidence, and indexed; extracted fields feed the Master Profile and passages with vectors go to Turso.">
+        <svg viewBox="0 0 960 280" role="img" aria-label="An upload is read, extracted by pattern rules and optionally by the LLM, checked for confidence, and indexed; extracted fields feed the Master Profile and passages with vectors go to Qdrant.">
           <defs>
             <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="head"/></marker>
           </defs>
@@ -263,7 +268,7 @@
           <line class="a" x1="860" y1="138" x2="860" y2="192" marker-end="url(#ar3)"/>
           <g class="n"><rect x="785" y="196" width="155" height="62" rx="10"/></g>
           <text class="t" x="862" y="222" text-anchor="middle">Passages + vectors</text>
-          <text class="s" x="862" y="240" text-anchor="middle">Turso F32_BLOB</text>
+          <text class="s" x="862" y="240" text-anchor="middle">in Qdrant</text>
         </svg>
       </div>
       <figcaption>The file’s type is checked from its bytes, not its name, and the original is encrypted before it touches disk. When two documents disagree on a value, the profile shows a conflict instead of picking one.</figcaption>
@@ -276,12 +281,12 @@
     <p>Retrieval-augmented generation, with a check at the end: an answer survives only if it can be traced to your profile or to a passage from your own documents.</p>
     <figure>
       <div class="scroll">
-        <svg viewBox="0 0 960 300" role="img" aria-label="Form labels go through retrieve, classify, an optional LLM generate step and validate; retrieval reads vectors from Turso, classification and validation read the Master Profile, and the result is an answer with source, confidence and method.">
+        <svg viewBox="0 0 960 300" role="img" aria-label="Form labels go through retrieve, classify, an optional LLM generate step and validate; retrieval reads vectors from Qdrant, classification and validation read the Master Profile, and the result is an answer with source, confidence and method.">
           <defs>
             <marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="head"/></marker>
           </defs>
           <g class="n"><rect x="190" y="34" width="150" height="50" rx="8"/></g>
-          <text class="t" x="265" y="55" text-anchor="middle">Turso vectors</text>
+          <text class="t" x="265" y="55" text-anchor="middle">Qdrant vectors</text>
           <text class="s" x="265" y="72" text-anchor="middle">your passages</text>
           <g class="n"><rect x="380" y="34" width="150" height="50" rx="8"/></g>
           <text class="t" x="455" y="55" text-anchor="middle">Master Profile</text>
@@ -304,7 +309,7 @@
           <text class="s" x="90" y="179" text-anchor="middle">from a form or a site</text>
           <g class="n"><rect x="190" y="130" width="150" height="70" rx="10"/></g>
           <text class="t" x="265" y="160" text-anchor="middle">Retrieve</text>
-          <text class="mono" x="265" y="179" text-anchor="middle">vector_distance_cos</text>
+          <text class="mono" x="265" y="179" text-anchor="middle">Qdrant cosine search</text>
           <g class="n"><rect x="380" y="130" width="150" height="70" rx="10"/></g>
           <text class="t" x="455" y="160" text-anchor="middle">Classify</text>
           <text class="s" x="455" y="179" text-anchor="middle">wording, then meaning</text>
@@ -445,7 +450,7 @@
     </div>
   </section>
 
-  <footer>Reflects the FormPilot code as of 8 October 2026: FastAPI backend, React frontend, Chrome/Edge extension, Turso/libSQL, Groq, local fastembed embeddings, Gmail SMTP.</footer>
+  <footer>Reflects the FormPilot code as of 8 October 2026: FastAPI backend, React frontend, Chrome/Edge extension, PostgreSQL/SQLite, Qdrant, Groq, local fastembed embeddings, Gmail SMTP.</footer>
 </div>
 </body>
 </html>

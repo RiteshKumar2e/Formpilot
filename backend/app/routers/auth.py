@@ -29,7 +29,7 @@ from ..schemas import (
     SignUpIn,
     UserOut,
 )
-from ..services import storage
+from ..services import storage, vectorstore
 from ..services.email_templates import password_reset_email
 from ..services.mailer import email_configured, send_email
 from ..security import (
@@ -191,6 +191,7 @@ def delete_account(response: Response, user: User = Depends(get_current_user), d
     """Permanently deletes the account, its documents (including stored files) and all extracted data."""
     for doc in user.documents:
         storage.delete(doc.storage_key)
+    vectorstore.delete_user(user.id)
     db.delete(user)
     db.commit()
     response.delete_cookie(SESSION_COOKIE, path="/")

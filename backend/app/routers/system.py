@@ -3,12 +3,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
-from ..database import get_db, uses_libsql
+from ..database import describe as describe_database
+from ..database import get_db
 from ..deps import get_current_user
 from ..models import User, WorkflowRun
 from ..schemas import CapabilitiesOut, WorkflowRunOut
 from ..services.embeddings import HashEmbedder, get_embedder
 from ..services.extraction import ocr_available
+from ..services.vectorstore import describe as describe_vector_store
 
 router = APIRouter(tags=["system"])
 
@@ -19,17 +21,11 @@ def capabilities(db: Session = Depends(get_db), _user: User = Depends(get_curren
     settings = get_settings()
     embedder = get_embedder()
     bind = db.get_bind()
-    if settings.turso_database_url:
-        database = "Turso (libSQL, remote)"
-    elif uses_libsql(bind):
-        database = "libSQL (local file)"
-    else:
-        database = bind.dialect.name
     return CapabilitiesOut(
         llm={"enabled": settings.llm_active, "provider": "Groq", "model": settings.llm_model},
         embeddings={"provider": embedder.name, "semantic": not isinstance(embedder, HashEmbedder)},
-        vector_store="libSQL native vectors (F32_BLOB + vector_distance_cos)" if uses_libsql(bind) else "in-process cosine search",
-        database=database,
+        vector_store=describe_vector_store(),
+        database=describe_database(bind),
         ocr=ocr_available(),
         oauth={"google": settings.google_oauth_enabled},
     )
