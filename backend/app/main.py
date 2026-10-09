@@ -70,5 +70,7 @@ for router in (
 
 
 @app.get("/api/health", tags=["health"])
+@app.get("/health", include_in_schema=False)  # for hosting health checks that don't use /api
+@app.get("/", include_in_schema=False)
 def health() -> dict[str, str]:
     return {"status": "ok"}
