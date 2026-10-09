@@ -70,9 +70,9 @@ Railway and Fly.io work the same way: a Python web service plus a persistent vol
    | Setting | Value |
    | --- | --- |
    | Root directory | `backend` |
-   | Runtime | Python 3.10+ (tested on 3.10.11) |
+   | Runtime | Python 3.12, pinned by `backend/.python-version` (also set `PYTHON_VERSION=3.12.8` on Render to be sure) |
    | Build command | `pip install -r requirements.txt` |
-   | Start command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"` |
+   | Start command | `python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"` |
    | Instances | 1 (rate limits are kept in memory) |
    | Instance size | 1 GB RAM or more (the embedding model needs about 300–500 MB) |
 
@@ -195,6 +195,7 @@ Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` on the backend. The **Continue
 
 | Symptom | Likely cause |
 | --- | --- |
+| Render: `uvicorn: command not found` | Start with `python -m uvicorn ...` instead of `uvicorn ...`. |
 | Signed in, but every page says "Please sign in" | The frontend calls the API on another site. Use the `/api` rewrite and an empty `VITE_API_BASE_URL`. |
 | API won't start: "Missing required settings in production" | `SECRET_KEY`, `FILE_ENCRYPTION_KEY` or `COOKIE_SECURE=true` is missing. |
 | Redirect loop or "too many redirects" | `TRUST_PROXY_HEADERS` isn't `true` behind the host's proxy, so HTTPS requests look like HTTP. |
