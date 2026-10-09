@@ -42,6 +42,22 @@ export interface AdminUser {
   last_active: string | null
 }
 
+export interface AdminUserDetail {
+  id: string
+  full_name: string
+  email: string
+  created_at: string
+  password_changed_at: string | null
+  sign_in: string
+  profile_details: number
+  saved_answers: number
+  templates: number
+  documents: { id: string; filename: string; size_bytes: number; page_count: number | null; status: string; created_at: string }[]
+  applications: { id: string; title: string; organization: string | null; status: string; fields: number; updated_at: string }[]
+  extensions: { name: string; created_at: string; last_used_at: string | null; active: boolean }[]
+  runs: { id: string; workflow: string; status: string; started_at: string }[]
+}
+
 export interface AdminDocument {
   id: string
   filename: string

@@ -238,7 +238,7 @@ export function SignInPage() {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
-  if (!loading && user) return <Navigate to={next} replace />
+  if (!loading && user) return <Navigate to={user.is_admin ? '/admin' : next} replace />
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -254,8 +254,11 @@ export function SignInPage() {
       const signedIn = await api.auth.signIn({ email: values.email.trim(), password: values.password, remember })
       void savePasswordCredential(signedIn.email, values.password, signedIn.full_name)
       setUser(signedIn)
-      open(signedIn)
-      navigate(next)
+      if (signedIn.is_admin) navigate('/admin')
+      else {
+        open(signedIn)
+        navigate(next)
+      }
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
     } finally {

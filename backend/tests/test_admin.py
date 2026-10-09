@@ -46,3 +46,11 @@ def test_admin_sees_counts_and_users(client, admin_email):
 
     for path in ENDPOINTS[2:]:
         assert client.get(path).status_code == 200
+
+
+def test_admin_user_detail(client, admin_email):
+    signup(client, admin_email)
+    me = next(u for u in client.get("/api/admin/users").json() if u["email"] == admin_email)
+    detail = client.get(f"/api/admin/users/{me['id']}").json()
+    assert detail["email"] == admin_email and detail["documents"] == [] and detail["sign_in"] == "Email and password"
+    assert client.get("/api/admin/users/missing").status_code == 404

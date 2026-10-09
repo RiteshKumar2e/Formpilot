@@ -34,7 +34,13 @@ const ActivityPage = lazy(() => import('./product/pages/Activity').then((m) => (
 const SettingsPage = lazy(() => import('./product/pages/Settings').then((m) => ({ default: m.SettingsPage })))
 const VaultPage = lazy(() => import('./product/pages/Vault').then((m) => ({ default: m.VaultPage })))
 const AnywherePage = lazy(() => import('./product/pages/Anywhere').then((m) => ({ default: m.AnywherePage })))
-const AdminPage = lazy(() => import('./product/pages/Admin').then((m) => ({ default: m.AdminPage })))
+const AdminLayout = lazy(() => import('./admin/AdminLayout').then((m) => ({ default: m.AdminLayout })))
+const AdminOverviewPage = lazy(() => import('./admin/AdminPages').then((m) => ({ default: m.AdminOverviewPage })))
+const AdminUsersPage = lazy(() => import('./admin/AdminPages').then((m) => ({ default: m.AdminUsersPage })))
+const AdminUserDetailPage = lazy(() => import('./admin/AdminPages').then((m) => ({ default: m.AdminUserDetailPage })))
+const AdminDocumentsPage = lazy(() => import('./admin/AdminPages').then((m) => ({ default: m.AdminDocumentsPage })))
+const AdminActivityPage = lazy(() => import('./admin/AdminPages').then((m) => ({ default: m.AdminActivityPage })))
+const AdminMessagesPage = lazy(() => import('./admin/AdminPages').then((m) => ({ default: m.AdminMessagesPage })))
 const ExtensionPage = lazy(() => import('./product/pages/ExtensionPage').then((m) => ({ default: m.ExtensionPage })))
 
 const appFallback = <div className="min-h-dvh bg-canvas" aria-busy="true" />
@@ -72,7 +78,23 @@ const router = createBrowserRouter([
       { path: '/validation', element: page(<ValidationPage />) },
       { path: '/activity', element: page(<ActivityPage />) },
       { path: '/settings', element: page(<SettingsPage />) },
-      { path: '/admin', element: page(<AdminPage />) },
+    ],
+  },
+  // Admin panel: a separate shell for ADMIN_EMAILS accounts.
+  {
+    path: '/admin',
+    element: (
+      <Suspense fallback={appFallback}>
+        <AdminLayout />
+      </Suspense>
+    ),
+    children: [
+      { index: true, element: page(<AdminOverviewPage />) },
+      { path: 'users', element: page(<AdminUsersPage />) },
+      { path: 'users/:id', element: page(<AdminUserDetailPage />) },
+      { path: 'documents', element: page(<AdminDocumentsPage />) },
+      { path: 'activity', element: page(<AdminActivityPage />) },
+      { path: 'messages', element: page(<AdminMessagesPage />) },
     ],
   },
   {

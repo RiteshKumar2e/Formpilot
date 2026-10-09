@@ -4,6 +4,7 @@ import type {
   AdminOverview,
   AdminRun,
   AdminUser,
+  AdminUserDetail,
   ApplicationTemplate,
   AutofillFieldInput,
   AutofillResponse,
@@ -188,6 +189,7 @@ export const api = {
   admin: {
     overview: () => request<AdminOverview>('/admin/overview'),
     users: () => request<AdminUser[]>('/admin/users'),
+    user: (id: string) => request<AdminUserDetail>(`/admin/users/${encodeURIComponent(id)}`),
     documents: () => request<AdminDocument[]>('/admin/documents'),
     activity: () => request<AdminRun[]>('/admin/activity'),
     messages: () => request<AdminMessage[]>('/admin/messages'),

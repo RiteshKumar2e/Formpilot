@@ -17,7 +17,6 @@ import {
   Search,
   Settings,
   ShieldCheck,
-  ShieldEllipsis,
   User,
   X,
 } from 'lucide-react'
@@ -53,7 +52,7 @@ function initials(name: string) {
 
 function SidebarContent({ onNavigate, onHelp }: { onNavigate?: () => void; onHelp: () => void }) {
   const { data, close } = useWorkspace()
-  const { signOut, user } = useAuth()
+  const { signOut } = useAuth()
   const navigate = useNavigate()
   const issues = data?.applications.filter((a) => a.status === 'needs_review').length ?? 0
 
@@ -66,7 +65,7 @@ function SidebarContent({ onNavigate, onHelp }: { onNavigate?: () => void; onHel
 
       <nav aria-label="Product" className="mt-6">
         <ul className="space-y-0.5">
-          {[...NAV, ...(user?.is_admin ? [{ to: '/admin', label: 'Admin', icon: ShieldEllipsis }] : [])].map(({ to, label, icon: Icon }) => (
+          {NAV.map(({ to, label, icon: Icon }) => (
             <li key={to}>
               <NavLink
                 to={to}
@@ -288,6 +287,7 @@ export function AppLayout() {
 
   if (authLoading) return <AppSkeleton />
   if (!user) return <Navigate to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`} replace />
+  if (user.is_admin) return <Navigate to="/admin" replace /> // admins use the admin panel, not the user app
 
   let body: ReactNode
   if (error && !data) {

@@ -6,7 +6,7 @@ passages stay encrypted. It shows accounts, counts, file names and statuses.
 
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -20,6 +20,7 @@ from ..models import (
     Document,
     ExtensionToken,
     ExtractedField,
+    OAuthAccount,
     SavedAnswer,
     User,
     WorkflowRun,
@@ -141,3 +142,53 @@ def activity(db: Session = Depends(get_db), limit: int = Query(default=50, ge=1,
 def messages(db: Session = Depends(get_db), limit: int = Query(default=100, ge=1, le=500)) -> list[dict]:
     rows = db.scalars(select(ContactMessage).order_by(ContactMessage.created_at.desc()).limit(limit))
     return [{"id": m.id, "name": m.name, "email": m.email, "message": m.message, "created_at": m.created_at} for m in rows]
+
+
+@router.get("/users/{user_id}")
+def user_detail(user_id: str, db: Session = Depends(get_db)) -> dict:
+    """One account: its documents, applications (title and status, not the answers), connections and runs."""
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found.")
+    now = datetime.now(timezone.utc)
+    documents = db.scalars(select(Document).where(Document.user_id == user.id).order_by(Document.created_at.desc()))
+    applications = db.scalars(select(Application).where(Application.user_id == user.id).order_by(Application.updated_at.desc()))
+    tokens = db.scalars(select(ExtensionToken).where(ExtensionToken.user_id == user.id).order_by(ExtensionToken.created_at.desc()))
+    runs = db.scalars(select(WorkflowRun).where(WorkflowRun.user_id == user.id).order_by(WorkflowRun.started_at.desc()).limit(20))
+    google = db.scalar(select(func.count()).select_from(OAuthAccount).where(OAuthAccount.user_id == user.id)) or 0
+    return {
+        "id": user.id,
+        "full_name": user.full_name,
+        "email": user.email,
+        "created_at": user.created_at,
+        "password_changed_at": user.password_changed_at,
+        "sign_in": "Google and password" if google else "Email and password",
+        "profile_details": db.scalar(select(func.count()).select_from(ExtractedField).where(ExtractedField.user_id == user.id)) or 0,
+        "saved_answers": db.scalar(select(func.count()).select_from(SavedAnswer).where(SavedAnswer.user_id == user.id)) or 0,
+        "templates": db.scalar(select(func.count()).select_from(ApplicationTemplate).where(ApplicationTemplate.user_id == user.id)) or 0,
+        "documents": [
+            {"id": d.id, "filename": d.filename, "size_bytes": d.size_bytes, "page_count": d.page_count, "status": d.status, "created_at": d.created_at}
+            for d in documents
+        ],
+        "applications": [
+            {
+                "id": a.id,
+                "title": str((a.data or {}).get("title", "")),
+                "organization": (a.data or {}).get("organization") or None,
+                "status": a.status,
+                "fields": len((a.data or {}).get("fields", [])),
+                "updated_at": a.updated_at,
+            }
+            for a in applications
+        ],
+        "extensions": [
+            {
+                "name": t.name,
+                "created_at": t.created_at,
+                "last_used_at": t.last_used_at,
+                "active": t.revoked_at is None and (t.expires_at if t.expires_at.tzinfo else t.expires_at.replace(tzinfo=timezone.utc)) > now,
+            }
+            for t in tokens
+        ],
+        "runs": [{"id": r.id, "workflow": r.workflow, "status": r.status, "started_at": r.started_at} for r in runs],
+    }
