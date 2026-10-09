@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from .config import get_settings
-from . import migrations
+from . import admin_account, migrations
 from .database import Base, engine
 from .services import vectorstore
 from .routers import admin, applications, auth, contact, documents, extension, integrations, profile, system, vault
@@ -18,6 +18,7 @@ settings.validate_for_production()
 async def lifespan(_app: FastAPI):
     migrations.upgrade(engine)  # adds columns introduced after a database was created
     Base.metadata.create_all(bind=engine)
+    admin_account.ensure_admin(engine)
     vectorstore.migrate_from_database(engine)  # passages stored in the database by earlier versions
     yield
     vectorstore.close()

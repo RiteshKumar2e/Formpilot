@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173"
     # Comma-separated emails that can open the admin dashboard (/admin).
     admin_emails: str = ""
+    # Password for the first ADMIN_EMAILS account, set at startup (created if missing). Empty: not managed.
+    admin_password: str = ""
     cookie_secure: bool = False
     session_hours: int = 12
     # "Remember me" keeps the session for this many days instead of session_hours.
