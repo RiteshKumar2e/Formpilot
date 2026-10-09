@@ -4,7 +4,7 @@
  * the site's styles can't reach it, and it never submits the site's form.
  */
 
-import { attachFile, dateChoices, fill, formatDateFor, highlight, type FillRequest } from '../core/autofill-engine'
+import { attachFile, dateChoices, fill, formatDateFor, highlight, toIsoDate, type FillRequest } from '../core/autofill-engine'
 import type { DetectedField } from '../core/field-detector'
 import type { SuggestResponse, Suggestion } from '../core/types'
 import { fillableAsIs, selectedByDefault, suggestRequest, TIER_LABEL } from '../field-mapper'
@@ -40,13 +40,8 @@ function logo(): HTMLElement {
 
 const pct = (n: number) => `${Math.round(n * 100)}%`
 
-/** "12 May 2002" -> "2002-05-12", for alternatives the person picks for a date field. */
-function isoFromDisplay(value: string): string | null {
-  const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
-  const m = value.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/)
-  const month = m ? months.indexOf(m[2].slice(0, 3).toLowerCase()) + 1 : 0
-  return m && month ? `${m[3]}-${String(month).padStart(2, '0')}-${m[1].padStart(2, '0')}` : null
-}
+/** "12 May 2002" or "22/03/2005" -> "YYYY-MM-DD", for alternatives the person picks for a date field. */
+const isoFromDisplay = toIsoDate
 
 export class Overlay {
   private host: HTMLElement

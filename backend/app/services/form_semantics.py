@@ -112,10 +112,15 @@ def choose_option(value: str, options: list[str]) -> tuple[str, float] | None:
 
 
 def iso_date(value: str) -> str | None:
-    """'12 May 2002' -> '2002-05-12', so the page can format it for its own date field."""
-    for fmt in ("%d %B %Y", "%d %b %Y", "%Y-%m-%d"):
+    """'12 May 2002' or '22/03/2005' -> 'YYYY-MM-DD', so the page can format it for its own date field.
+
+    Numeric dates are read day first (22/03/2005), as written on Indian documents and forms.
+    """
+    text = re.sub(r"\s+", " ", value.strip().replace(",", " ")).replace("-", "/").replace(".", "/")
+    text = re.sub(r"(\d)(st|nd|rd|th)\b", r"\1", text, flags=re.I)
+    for fmt in ("%d %B %Y", "%d %b %Y", "%B %d %Y", "%b %d %Y", "%d/%b/%Y", "%d/%B/%Y", "%Y/%m/%d", "%d/%m/%Y"):
         try:
-            return datetime.strptime(value.strip(), fmt).date().isoformat()
+            return datetime.strptime(text, fmt).date().isoformat()
         except ValueError:
             continue
     return None

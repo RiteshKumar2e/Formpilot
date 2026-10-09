@@ -104,6 +104,26 @@ export function formatDateFor(el: FieldElement, iso: string): string | null {
   return null
 }
 
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+
+/**
+ * '22/03/2005', '22-03-2005', '22 Mar 2005', '2005-03-22' -> '2005-03-22'. Numeric dates are read
+ * day first, as on Indian documents. Null when the text isn't a real date.
+ */
+export function toIsoDate(value: string): string | null {
+  const text = value.trim().replace(/,/g, ' ').replace(/\s+/g, ' ')
+  let y: number, mo: number, d: number
+  let m = text.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/)
+  if (m) [y, mo, d] = [+m[1], +m[2], +m[3]]
+  else if ((m = text.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/))) [d, mo, y] = [+m[1], +m[2], +m[3]]
+  else if ((m = text.match(/^(\d{1,2})(?:st|nd|rd|th)?[ -/.]([A-Za-z]+)[ -/.](\d{4})$/))) [d, mo, y] = [+m[1], MONTHS.indexOf(m[2].slice(0, 3).toLowerCase()) + 1, +m[3]]
+  else if ((m = text.match(/^([A-Za-z]+) (\d{1,2})(?:st|nd|rd|th)? (\d{4})$/))) [mo, d, y] = [MONTHS.indexOf(m[1].slice(0, 3).toLowerCase()) + 1, +m[2], +m[3]]
+  else return null
+  const date = new Date(Date.UTC(y, mo - 1, d))
+  if (!mo || date.getUTCFullYear() !== y || date.getUTCMonth() !== mo - 1 || date.getUTCDate() !== d) return null
+  return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+}
+
 /** Both readings of an ambiguous date, for the person to choose between. */
 export function dateChoices(iso: string): { label: string; value: string }[] {
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/)
@@ -133,8 +153,10 @@ export function fill(field: DetectedField, request: FillRequest): FillResult {
   if (el instanceof HTMLSelectElement) return selectOption(el, request.option ?? request.value)
   if (field.type === 'checkbox' || field.type === 'file') return { ok: false, reason: 'Choose this yourself.' }
   let value = request.value
-  if (request.iso) {
-    const formatted = formatDateFor(el, request.iso)
+  // Date inputs only accept YYYY-MM-DD, whatever format the profile stores the date in.
+  const iso = request.iso ?? (['date', 'month', 'datetime-local'].includes(typeOf(el)) ? toIsoDate(value) : null)
+  if (iso) {
+    const formatted = formatDateFor(el, iso)
     // No format hint: day and month could be swapped, so the person picks the format (see dateChoices).
     if (formatted === null) return { ok: false, reason: 'Confirm the date format.' }
     value = formatted
