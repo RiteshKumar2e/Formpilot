@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { CheckCircle2, Download, Loader2, MonitorSmartphone, Puzzle, ShieldCheck } from 'lucide-react'
-import { Button } from '../../components/ui/Button'
+import { Button, buttonClasses } from '../../components/ui/Button'
 import { usePageMeta } from '../../hooks/usePageMeta'
 import { api, ApiError } from '../../lib/api'
 import type { ExtensionConnection } from '../../types/api'
@@ -55,10 +55,11 @@ function connectExtension(token: string): Promise<void> {
 
 const STEPS = [
   {
-    title: 'Build the extension',
+    title: 'Download and unzip',
     body: (
       <>
-        In the project, run <code className="rounded bg-sunken px-1.5 py-0.5 font-mono text-[13px]">cd frontend && npm run build:extension</code>.
+        Download <strong>formpilot-extension.zip</strong> with the button above and extract it to a folder you’ll keep (for example{' '}
+        <code className="rounded bg-sunken px-1.5 py-0.5 font-mono text-[13px]">Documents/formpilot-extension</code>).
       </>
     ),
   },
@@ -67,8 +68,8 @@ const STEPS = [
     body: (
       <>
         Open <code className="rounded bg-sunken px-1.5 py-0.5 font-mono text-[13px]">chrome://extensions</code> (or{' '}
-        <code className="rounded bg-sunken px-1.5 py-0.5 font-mono text-[13px]">edge://extensions</code>), turn on Developer mode, choose{' '}
-        <strong>Load unpacked</strong> and select <code className="rounded bg-sunken px-1.5 py-0.5 font-mono text-[13px]">extension/dist</code>.
+        <code className="rounded bg-sunken px-1.5 py-0.5 font-mono text-[13px]">edge://extensions</code>), turn on <strong>Developer mode</strong>, choose{' '}
+        <strong>Load unpacked</strong> and select the extracted folder (the one containing <code className="rounded bg-sunken px-1.5 py-0.5 font-mono text-[13px]">manifest.json</code>).
       </>
     ),
   },
@@ -175,6 +176,11 @@ export function ExtensionPage() {
             <Download className="size-4 text-accent" aria-hidden />
             Install in Chrome or Edge
           </h2>
+          <a href="/formpilot-extension.zip" download className={`${buttonClasses('primary', 'md')} mt-4`}>
+            <Download className="size-4" aria-hidden />
+            Download extension (.zip)
+          </a>
+          <p className="mt-2 text-[13px] text-subtle">Ready to install. No build needed. Works in Chrome and Edge.</p>
           <ol className="mt-4 space-y-4">
             {STEPS.map((s, i) => (
               <li key={s.title} className="flex gap-3">

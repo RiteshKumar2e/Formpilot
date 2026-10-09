@@ -10,6 +10,12 @@ Any website → detect fields → understand them (FormPilot API) → match your
 
 FormPilot never submits a form.
 
+## Install (users, no build needed)
+
+1. Download **formpilot-extension.zip** from https://formpilot-six.vercel.app/extension (or `frontend/public/formpilot-extension.zip` in this repo) and extract it.
+2. Open `chrome://extensions` (or `edge://extensions`), turn on **Developer mode**, click **Load unpacked** and select the extracted folder (the one containing `manifest.json`).
+3. Sign in to FormPilot, open **Browser Extension** (`/extension`) and click **Connect this browser**.
+
 ## Install (development)
 
 1. Run the FormPilot backend and web app (see the main README).
@@ -22,7 +28,7 @@ FormPilot never submits a form.
 4. In the FormPilot app, open **Browser Extension** (`/extension`) and click **Connect this browser**.
 5. Open any website with a form. A small **FormPilot · N fields** button appears at the bottom right.
 
-After changing the code, run `npm run build:extension` again and click the reload icon on the extension's card.
+After changing the code, run `npm run build:extension` again and click the reload icon on the extension's card. The build also refreshes `frontend/public/formpilot-extension.zip`, the file the website offers for download; commit it so the deployed site serves the new version.
 
 ## How it works
 

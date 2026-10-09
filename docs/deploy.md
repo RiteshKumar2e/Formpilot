@@ -164,8 +164,8 @@ To ship a build that points at your deployment by default:
 
 1. In `extension/src/shared/messages.ts`, set `DEFAULT_APP_URL = 'https://your-app.com'`.
 2. In `extension/src/manifest.json`, add `"https://your-app.com/*"` to `host_permissions`, and bump `version`.
-3. Build: `cd frontend && npm run build:extension`.
-4. Load `extension/dist` (Developer mode → Load unpacked), or zip the **contents** of `extension/dist` and upload it to the Chrome Web Store / Edge Add-ons. The store asks for a privacy policy and a reason for each permission. The extension runs on all sites so it can find forms; it sends only field metadata, and only when the user opens it.
+3. Build: `cd frontend && npm run build:extension`. This writes `extension/dist` and `frontend/public/formpilot-extension.zip`; commit the zip and the website's `/extension` page serves it as a download, so users never build anything.
+4. Users download the zip, extract it and load the folder (Developer mode → Load unpacked). For one-click installs, upload the same zip to the Chrome Web Store / Edge Add-ons. The store asks for a privacy policy and a reason for each permission. The extension runs on all sites so it can find forms; it sends only field metadata, and only when the user opens it.
 
 ## 7. Optional: Sign in with Google
 

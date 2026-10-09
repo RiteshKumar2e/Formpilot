@@ -150,9 +150,13 @@ Open http://localhost:5173, create an account, and upload a resume or certificat
 
 ### 4. Browser extension (optional)
 
+Users don't build anything: the app's **Browser Extension** page (`/extension`) has a **Download extension** button for the ready-made `formpilot-extension.zip`. Extract it and load the folder in `chrome://extensions` (Developer mode → Load unpacked).
+
+To rebuild it after changing the extension code:
+
 ```bash
 cd frontend
-npm run build:extension             # builds extension/dist
+npm run build:extension             # builds extension/dist and public/formpilot-extension.zip
 ```
 
 Load `extension/dist` in `chrome://extensions` or `edge://extensions` (Developer mode → Load unpacked), then open **Browser Extension** in the app and click **Connect this browser**. Details: [`extension/README.md`](extension/README.md).
