@@ -9,6 +9,7 @@ import { NotFoundPage } from './pages/NotFoundPage'
 
 // Marketing pages
 const AboutPage = lazy(() => import('./pages/AboutPage').then((m) => ({ default: m.AboutPage })))
+const TeamPage = lazy(() => import('./pages/TeamPage').then((m) => ({ default: m.TeamPage })))
 const ContactPage = lazy(() => import('./pages/ContactPage').then((m) => ({ default: m.ContactPage })))
 const MarketingPage = lazy(() => import('./pages/MarketingPages').then((m) => ({ default: m.MarketingPage })))
 const PrivacyPage = lazy(() => import('./pages/LegalPages').then((m) => ({ default: m.PrivacyPage })))
@@ -80,6 +81,7 @@ const router = createBrowserRouter([
       { path: '/features', element: <MarketingPage page="features" /> },
       { path: '/security', element: <MarketingPage page="security" /> },
       { path: '/about', element: <AboutPage /> },
+      { path: '/team', element: <TeamPage /> },
       { path: '/contact', element: <ContactPage /> },
       { path: '/privacy', element: <PrivacyPage /> },
       { path: '/terms', element: <TermsPage /> },

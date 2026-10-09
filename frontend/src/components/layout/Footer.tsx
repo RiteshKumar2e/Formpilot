@@ -18,6 +18,7 @@ const COLUMNS = [
     title: 'Company',
     links: [
       { label: 'About', to: '/about' },
+      { label: 'Team', to: '/team' },
       { label: 'Contact', to: '/contact' },
     ],
   },
