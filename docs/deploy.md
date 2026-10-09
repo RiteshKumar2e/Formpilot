@@ -4,13 +4,13 @@
 
 FormPilot has five parts to deploy:
 
-| Part | What it is | Where it runs |
-| --- | --- | --- |
-| Database | PostgreSQL for app data | Neon, Supabase, Render Postgres or Railway Postgres |
-| Vector database | Qdrant, for document embeddings (RAG) | Qdrant Cloud |
-| Backend | FastAPI (`backend/`) | Any Python host with a persistent disk: Render, Railway, Fly.io, or a VM |
-| Frontend | React static site (`frontend/`) | Vercel or Netlify |
-| Extension | Chrome/Edge extension (`extension/`) | Users' browsers (load unpacked, or the Chrome Web Store) |
+| Part            | What it is                             | Where it runs                                                            |
+| --------------- | -------------------------------------- | ------------------------------------------------------------------------ |
+| Database        | PostgreSQL for app data                | Neon, Supabase, Render Postgres or Railway Postgres                      |
+| Vector database | Qdrant, for document embeddings (RAG)  | Qdrant Cloud                                                             |
+| Backend         | FastAPI (`backend/`)                 | Any Python host with a persistent disk: Render, Railway, Fly.io, or a VM |
+| Frontend        | React static site (`frontend/`)      | Vercel or Netlify                                                        |
+| Extension       | Chrome/Edge extension (`extension/`) | Users' browsers (load unpacked, or the Chrome Web Store)                 |
 
 ```
 Browser ──► https://your-app.com            (static frontend on Vercel/Netlify)
@@ -59,6 +59,7 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 > **Keep `FILE_ENCRYPTION_KEY` safe and don't change it.** It encrypts uploaded files and the personal data stored in the database (extracted values, applications, templates, saved answers). If it is lost or changed, that data can't be read again.
 
 Also get:
+
 - **Groq:** an API key from https://console.groq.com/keys (optional; without it FormPilot uses rules and embeddings only).
 - **Gmail SMTP** for password reset emails: turn on 2-Step Verification, then create an App password at https://myaccount.google.com/apppasswords.
 
@@ -69,15 +70,14 @@ Railway and Fly.io work the same way: a Python web service plus a persistent vol
 1. **New → Web Service**, connect the repository.
 2. Settings:
 
-   | Setting | Value |
-   | --- | --- |
-   | Root directory | `backend` |
-   | Runtime | Python 3.12, pinned by `backend/.python-version` (also set `PYTHON_VERSION=3.12.8` on Render to be sure) |
-   | Build command | `pip install -r requirements.txt` |
-   | Start command | `python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"` |
-   | Instances | 1 (rate limits are kept in memory) |
-   | Instance size | 1 GB RAM or more (the embedding model needs about 300–500 MB) |
-
+   | Setting        | Value                                                                                                       |
+   | -------------- | ----------------------------------------------------------------------------------------------------------- |
+   | Root directory | `backend`                                                                                                 |
+   | Runtime        | Python 3.12, pinned by`backend/.python-version` (also set `PYTHON_VERSION=3.12.8` on Render to be sure) |
+   | Build command  | `pip install -r requirements.txt`                                                                         |
+   | Start command  | `python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"`    |
+   | Instances      | 1 (rate limits are kept in memory)                                                                          |
+   | Instance size  | 1 GB RAM or more (the embedding model needs about 300–500 MB)                                              |
 3. **Add a persistent disk** mounted at `/var/data` (1 GB is plenty to start). Uploaded files are stored there, encrypted. Without a disk they disappear on every redeploy, while their database rows remain.
 4. **Environment variables:**
 
@@ -115,7 +115,6 @@ Railway and Fly.io work the same way: a Python web service plus a persistent vol
    ```
 
    In production the API refuses to start without `SECRET_KEY`, `FILE_ENCRYPTION_KEY` and `COOKIE_SECURE=true`. HTTPS redirects and HSTS are switched on automatically.
-
 5. Optional, for scanned PDFs and photos: install Tesseract on the host and `pip install -r requirements-ocr.txt`. Without it, image uploads are accepted but marked *needs review*.
 
 Check it:
@@ -138,7 +137,6 @@ The first start takes a minute longer while the embedding model downloads.
      { "source": "/((?!api/|assets/).*)", "destination": "/index.html" }
    ]
    ```
-
 4. Environment variables: leave `VITE_API_BASE_URL` **empty**, so the app calls `/api` on its own address. `VITE_PLAUSIBLE_DOMAIN` is optional.
 5. Add your domain in Vercel, then set `APP_URL` and `CORS_ORIGINS` on the backend to it and redeploy the backend.
 
@@ -152,6 +150,7 @@ The first start takes a minute longer while the embedding model downloads.
 ## 5. Your own domain
 
 The live frontend is `https://formpilot-six.vercel.app`. To use a different domain, replace that address in:
+
 - `frontend/index.html` (canonical URL, Open Graph tags)
 - `frontend/public/robots.txt` and `frontend/public/sitemap.xml`
 - `frontend/src/hooks/usePageMeta.ts`
@@ -171,6 +170,7 @@ To ship a build that points at your deployment by default:
 ## 7. Optional: Sign in with Google
 
 In Google Cloud Console → APIs & Services → Credentials, create an **OAuth client ID** (Web application) with:
+
 - Authorized JavaScript origin: `https://your-app.com`
 - Authorized redirect URI: `https://your-app.com/api/auth/oauth/google/callback`
 
@@ -195,14 +195,14 @@ Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` on the backend. The **Continue
 
 ## Troubleshooting
 
-| Symptom | Likely cause |
-| --- | --- |
-| Render: `uvicorn: command not found` | Start with `python -m uvicorn ...` instead of `uvicorn ...`. |
-| Signed in, but every page says "Please sign in" | The frontend calls the API on another site. Use the `/api` rewrite and an empty `VITE_API_BASE_URL`. |
-| API won't start: "Missing required settings in production" | `SECRET_KEY`, `FILE_ENCRYPTION_KEY` or `COOKIE_SECURE=true` is missing. |
-| Redirect loop or "too many redirects" | `TRUST_PROXY_HEADERS` isn't `true` behind the host's proxy, so HTTPS requests look like HTTP. |
-| Uploaded documents vanish after a redeploy | No persistent disk, or `STORAGE_DIR` isn't on it. |
-| Instance restarts while processing an upload | Out of memory: use 1 GB+ RAM or `EMBEDDING_PROVIDER=hash`. |
-| "Email isn't set up yet" on Forgot password | `SMTP_HOST` is empty, or the backend wasn't restarted after setting it. |
-| Extension: "Couldn't reach FormPilot" | Wrong app address in the popup settings, or permission for it wasn't granted. |
-| Extension popup shows `ERR_FILE_NOT_FOUND` | Chrome loaded the wrong folder. Load `extension/dist`, not `extension/`. |
+| Symptom                                                    | Likely cause                                                                                            |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Render:`uvicorn: command not found`                      | Start with`python -m uvicorn ...` instead of `uvicorn ...`.                                         |
+| Signed in, but every page says "Please sign in"            | The frontend calls the API on another site. Use the`/api` rewrite and an empty `VITE_API_BASE_URL`. |
+| API won't start: "Missing required settings in production" | `SECRET_KEY`, `FILE_ENCRYPTION_KEY` or `COOKIE_SECURE=true` is missing.                           |
+| Redirect loop or "too many redirects"                      | `TRUST_PROXY_HEADERS` isn't `true` behind the host's proxy, so HTTPS requests look like HTTP.       |
+| Uploaded documents vanish after a redeploy                 | No persistent disk, or`STORAGE_DIR` isn't on it.                                                      |
+| Instance restarts while processing an upload               | Out of memory: use 1 GB+ RAM or`EMBEDDING_PROVIDER=hash`.                                             |
+| "Email isn't set up yet" on Forgot password                | `SMTP_HOST` is empty, or the backend wasn't restarted after setting it.                               |
+| Extension: "Couldn't reach FormPilot"                      | Wrong app address in the popup settings, or permission for it wasn't granted.                           |
+| Extension popup shows`ERR_FILE_NOT_FOUND`                | Chrome loaded the wrong folder. Load`extension/dist`, not `extension/`.                             |
