@@ -5,6 +5,70 @@ export interface User {
   full_name: string
   email: string
   created_at: string
+  /** Listed in the server's ADMIN_EMAILS: can open /admin. */
+  is_admin?: boolean
+}
+
+export interface AdminOverview {
+  database: string
+  vector_store: { name: string; collection: string; points: number | null; error: string | null }
+  totals: {
+    users: number
+    documents: number
+    extracted_fields: number
+    applications: number
+    saved_answers: number
+    templates: number
+    workflow_runs: number
+    contact_messages: number
+    extensions_connected: number
+    storage_bytes: number
+  }
+  documents_by_status: Record<string, number>
+  applications_by_status: Record<string, number>
+  workflows_by_status: Record<string, number>
+  signups: { date: string; count: number }[]
+}
+
+export interface AdminUser {
+  id: string
+  full_name: string
+  email: string
+  created_at: string
+  documents: number
+  applications: number
+  saved_answers: number
+  extension: boolean
+  last_active: string | null
+}
+
+export interface AdminDocument {
+  id: string
+  filename: string
+  owner: string
+  content_type: string
+  size_bytes: number
+  page_count: number | null
+  status: string
+  created_at: string
+}
+
+export interface AdminRun {
+  id: string
+  workflow: string
+  status: string
+  user: string
+  steps: number
+  started_at: string
+  finished_at: string | null
+}
+
+export interface AdminMessage {
+  id: number
+  name: string
+  email: string
+  message: string
+  created_at: string
 }
 
 export type DocumentStatus = 'processing' | 'processed' | 'needs_review' | 'failed'

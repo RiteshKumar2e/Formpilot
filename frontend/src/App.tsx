@@ -34,6 +34,7 @@ const ActivityPage = lazy(() => import('./product/pages/Activity').then((m) => (
 const SettingsPage = lazy(() => import('./product/pages/Settings').then((m) => ({ default: m.SettingsPage })))
 const VaultPage = lazy(() => import('./product/pages/Vault').then((m) => ({ default: m.VaultPage })))
 const AnywherePage = lazy(() => import('./product/pages/Anywhere').then((m) => ({ default: m.AnywherePage })))
+const AdminPage = lazy(() => import('./product/pages/Admin').then((m) => ({ default: m.AdminPage })))
 const ExtensionPage = lazy(() => import('./product/pages/ExtensionPage').then((m) => ({ default: m.ExtensionPage })))
 
 const appFallback = <div className="min-h-dvh bg-canvas" aria-busy="true" />
@@ -71,6 +72,7 @@ const router = createBrowserRouter([
       { path: '/validation', element: page(<ValidationPage />) },
       { path: '/activity', element: page(<ActivityPage />) },
       { path: '/settings', element: page(<SettingsPage />) },
+      { path: '/admin', element: page(<AdminPage />) },
     ],
   },
   {

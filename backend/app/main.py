@@ -8,7 +8,7 @@ from .config import get_settings
 from . import migrations
 from .database import Base, engine
 from .services import vectorstore
-from .routers import applications, auth, contact, documents, extension, integrations, profile, system, vault
+from .routers import admin, applications, auth, contact, documents, extension, integrations, profile, system, vault
 
 settings = get_settings()
 settings.validate_for_production()
@@ -65,6 +65,7 @@ for router in (
     integrations.router,
     system.router,
     contact.router,
+    admin.router,
 ):
     app.include_router(router, prefix="/api")
 

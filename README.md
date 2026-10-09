@@ -206,6 +206,7 @@ Create a key at [console.groq.com/keys](https://console.groq.com/keys) and set `
 | `APP_URL` | `http://localhost:5173` | Public URL of the web app (OAuth returns here). |
 | `API_PUBLIC_URL` | `APP_URL` | Public URL of the API, if it isn't served under `APP_URL/api`. |
 | `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated allowed frontend origins. |
+| `ADMIN_EMAILS` | empty | Comma-separated emails that can open the admin dashboard (`/admin`). |
 | `COOKIE_SECURE` | `false` | Must be `true` in production (HTTPS only). |
 | `ENFORCE_HTTPS` | on in production | Redirects HTTP to HTTPS and sends HSTS. |
 | `TRUST_PROXY_HEADERS` | `false` | Trust `X-Forwarded-*` when behind a reverse proxy you control. |

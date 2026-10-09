@@ -1,7 +1,9 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, field_validator
+
+from .config import get_settings
 
 
 class UserOut(BaseModel):
@@ -11,6 +13,11 @@ class UserOut(BaseModel):
     full_name: str
     email: str
     created_at: datetime
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def is_admin(self) -> bool:
+        return get_settings().is_admin(self.email)
 
 
 class SessionOut(BaseModel):

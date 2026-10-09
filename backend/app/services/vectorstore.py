@@ -90,6 +90,16 @@ def describe() -> str:
     return "Qdrant (in-memory)" if settings.qdrant_path == ":memory:" else "Qdrant (local folder)"
 
 
+def stats() -> dict[str, int | str | None]:
+    """Point count of the passages collection, for the admin dashboard."""
+    settings = get_settings()
+    try:
+        return {"points": client().count(settings.qdrant_collection).count, "collection": settings.qdrant_collection, "error": None}
+    except Exception as exc:  # the dashboard still loads when Qdrant is unreachable
+        log.warning("Qdrant stats unavailable: %s", exc)
+        return {"points": None, "collection": settings.qdrant_collection, "error": "Qdrant is unreachable"}
+
+
 def _match(field: str, value: str) -> models.FieldCondition:
     return models.FieldCondition(key=field, match=models.MatchValue(value=value))
 

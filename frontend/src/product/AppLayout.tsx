@@ -17,6 +17,7 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  ShieldEllipsis,
   User,
   X,
 } from 'lucide-react'
@@ -52,7 +53,7 @@ function initials(name: string) {
 
 function SidebarContent({ onNavigate, onHelp }: { onNavigate?: () => void; onHelp: () => void }) {
   const { data, close } = useWorkspace()
-  const { signOut } = useAuth()
+  const { signOut, user } = useAuth()
   const navigate = useNavigate()
   const issues = data?.applications.filter((a) => a.status === 'needs_review').length ?? 0
 
@@ -65,7 +66,7 @@ function SidebarContent({ onNavigate, onHelp }: { onNavigate?: () => void; onHel
 
       <nav aria-label="Product" className="mt-6">
         <ul className="space-y-0.5">
-          {NAV.map(({ to, label, icon: Icon }) => (
+          {[...NAV, ...(user?.is_admin ? [{ to: '/admin', label: 'Admin', icon: ShieldEllipsis }] : [])].map(({ to, label, icon: Icon }) => (
             <li key={to}>
               <NavLink
                 to={to}

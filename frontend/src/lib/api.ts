@@ -1,4 +1,9 @@
 import type {
+  AdminDocument,
+  AdminMessage,
+  AdminOverview,
+  AdminRun,
+  AdminUser,
   ApplicationTemplate,
   AutofillFieldInput,
   AutofillResponse,
@@ -179,6 +184,13 @@ export const api = {
     /** What the browser extension sends: the fields it detected on another website's form. */
     suggest: (payload: { fields: AutofillFieldInput[]; page_url?: string; page_title?: string; organization?: string; role?: string }) =>
       request<AutofillResponse>('/autofill/suggest', { method: 'POST', body: JSON.stringify(payload) }),
+  },
+  admin: {
+    overview: () => request<AdminOverview>('/admin/overview'),
+    users: () => request<AdminUser[]>('/admin/users'),
+    documents: () => request<AdminDocument[]>('/admin/documents'),
+    activity: () => request<AdminRun[]>('/admin/activity'),
+    messages: () => request<AdminMessage[]>('/admin/messages'),
   },
   extension: {
     list: () => request<ExtensionConnection[]>('/extension/tokens'),

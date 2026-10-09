@@ -100,6 +100,7 @@ Railway and Fly.io work the same way: a Python web service plus a persistent vol
 
    APP_URL=https://your-app.com                  # the frontend's public address
    CORS_ORIGINS=https://your-app.com
+   ADMIN_EMAILS=you@example.com           # who can open /admin
    COOKIE_SECURE=true
    TRUST_PROXY_HEADERS=true
 

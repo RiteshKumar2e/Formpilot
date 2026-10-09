@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./formpilot.db"
     storage_dir: str = "./storage"
     cors_origins: str = "http://localhost:5173"
+    # Comma-separated emails that can open the admin dashboard (/admin).
+    admin_emails: str = ""
     cookie_secure: bool = False
     session_hours: int = 12
     # "Remember me" keeps the session for this many days instead of session_hours.
@@ -94,6 +96,10 @@ class Settings(BaseSettings):
     @property
     def google_oauth_enabled(self) -> bool:
         return bool(self.google_client_id and self.google_client_secret)
+
+    def is_admin(self, email: str) -> bool:
+        admins = {e.strip().lower() for e in self.admin_emails.split(",") if e.strip()}
+        return email.strip().lower() in admins
 
     @property
     def cors_origin_list(self) -> list[str]:

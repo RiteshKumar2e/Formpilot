@@ -4,6 +4,7 @@ from fastapi import Cookie, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .config import get_settings
 from .database import get_db
 from .models import ExtensionToken, User
 from .security import SESSION_COOKIE, hash_reset_token, read_session_token
@@ -76,6 +77,13 @@ def get_optional_user(
 def get_current_user(user: User | None = Depends(get_optional_user)) -> User:
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Please sign in to continue.")
+    return user
+
+
+def get_admin_user(user: User = Depends(get_current_user)) -> User:
+    """A signed-in user whose email is in ADMIN_EMAILS. Others get 404, so the admin area isn't advertised."""
+    if not get_settings().is_admin(user.email):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Not Found")
     return user
 
 
