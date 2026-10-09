@@ -1,2 +1,3 @@
 # Netlify: serve the SPA for every route. (On Vercel, frontend/vercel.json does this.)
-/*  /index.html  200
+/api/*  https://formpilot-yapl.onrender.com/api/:splat  200
+/*      /index.html  200

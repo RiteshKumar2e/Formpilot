@@ -1,5 +1,7 @@
 # Deploying FormPilot
 
+**Live deployment:** frontend https://formpilot-six.vercel.app (Vercel), backend https://formpilot-yapl.onrender.com (Render). `frontend/vercel.json` proxies `/api/*` from the frontend to the backend.
+
 FormPilot has five parts to deploy:
 
 | Part | What it is | Where it runs |
