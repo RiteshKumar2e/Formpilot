@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Instrument Sans (SIL Open Font License), self-hosted and preloaded from index.html. */
+/* Instrument Sans (SIL Open Font License), self-hosted. Not preloaded: app pages render text only after the API answers, so a preload went unused. */
 @font-face {
   font-family: "Instrument Sans";
   src: url("/fonts/instrument-sans-latin.woff2") format("woff2-variations"), url("/fonts/instrument-sans-latin.woff2") format("woff2");
