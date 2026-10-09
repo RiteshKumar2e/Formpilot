@@ -15,6 +15,7 @@ import re
 import uuid
 from dataclasses import dataclass
 from functools import lru_cache
+from urllib.parse import urlparse
 
 import numpy as np
 from cryptography.fernet import InvalidToken
@@ -48,7 +49,11 @@ class Passage:
 def client() -> QdrantClient:
     settings = get_settings()
     if settings.qdrant_url:
-        qdrant = QdrantClient(url=settings.qdrant_url, api_key=settings.qdrant_api_key or None, timeout=20)
+        # qdrant-client defaults to port 6333, which many college and office networks block. Qdrant Cloud
+        # also serves on 443, so an https URL without a port uses that.
+        parsed = urlparse(settings.qdrant_url)
+        port = parsed.port or (443 if parsed.scheme == "https" else 6333)
+        qdrant = QdrantClient(url=settings.qdrant_url, port=port, api_key=settings.qdrant_api_key or None, timeout=20)
     elif settings.qdrant_path == ":memory:":
         qdrant = QdrantClient(location=":memory:")
     else:
