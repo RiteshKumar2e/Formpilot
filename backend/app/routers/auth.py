@@ -205,7 +205,7 @@ def sign_out(response: Response) -> Response:
 def delete_account(response: Response, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Response:
     """Permanently deletes the account, its documents (including stored files) and all extracted data."""
     for doc in user.documents:
-        storage.delete(doc.storage_key)
+        storage.delete(db, doc.storage_key)
     vectorstore.delete_user(user.id)
     db.delete(user)
     db.commit()

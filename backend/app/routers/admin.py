@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from ..config import get_settings
 from ..database import describe as describe_database
 from ..database import get_db
 from ..deps import get_admin_user
@@ -50,6 +51,8 @@ def overview(db: Session = Depends(get_db)) -> dict:
     count = lambda model: db.scalar(select(func.count()).select_from(model)) or 0  # noqa: E731
     return {
         "database": describe_database(db.get_bind()),
+        # A SQLite file on a production host lives on its disk, which hosts like Render wipe on restart.
+        "persistent": not (get_settings().is_production and db.get_bind().dialect.name == "sqlite"),
         "vector_store": {"name": vectorstore.describe(), **vectorstore.stats()},
         "totals": {
             "users": count(User),

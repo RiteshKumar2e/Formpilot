@@ -69,9 +69,13 @@ def test_resume_extraction(signed_in):
 
 def test_files_are_encrypted_at_rest(signed_in):
     doc = upload(signed_in, "Resume.pdf", make_pdf(RESUME_LINES)).json()
-    stored = list(Path(get_settings().storage_dir).rglob(f"{doc['id']}.bin"))
+    from app.database import SessionLocal
+    from app.models import StoredFile
+
+    with SessionLocal() as db:
+        stored = [f for f in db.query(StoredFile).all() if f.key.endswith(f"{doc['id']}.bin")]
     assert len(stored) == 1
-    assert not stored[0].read_bytes().startswith(b"%PDF")
+    assert not stored[0].data.startswith(b"%PDF") and b"%PDF" not in stored[0].data
 
 
 def test_conflict_detection_and_resolution(signed_in):
@@ -142,7 +146,11 @@ def test_delete_account_removes_everything(client):
     doc = upload(client, "Resume.pdf", make_pdf(RESUME_LINES)).json()
     assert client.delete("/api/auth/me").status_code == 204
     assert client.get("/api/auth/me").status_code == 401
-    assert not list(Path(get_settings().storage_dir).rglob(f"{doc['id']}.bin"))
+    from app.database import SessionLocal
+    from app.models import StoredFile
+
+    with SessionLocal() as db:
+        assert not [f for f in db.query(StoredFile).all() if f.key.endswith(f"{doc['id']}.bin")]
     res = client.post("/api/auth/signin", json={"email": "gone@example.com", "password": "longpassword1"})
     assert res.status_code == 401
 

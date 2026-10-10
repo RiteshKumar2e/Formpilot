@@ -39,6 +39,7 @@ def test_admin_sees_counts_and_users(client, admin_email):
     assert overview["totals"]["users"] >= 1
     assert len(overview["signups"]) == 14 and sum(d["count"] for d in overview["signups"]) >= 1
     assert overview["vector_store"]["collection"]
+    assert overview["persistent"] is True  # SQLite is fine outside production
 
     users = client.get("/api/admin/users").json()
     me = next(u for u in users if u["email"] == admin_email)

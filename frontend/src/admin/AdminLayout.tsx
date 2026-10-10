@@ -167,6 +167,16 @@ export function AdminLayout() {
             </button>
           </header>
           <main className="mx-auto max-w-[1200px] px-4 py-6 sm:px-6 sm:py-8">
+            {data && !data.overview.persistent && (
+              <div role="alert" className="mb-4 rounded-[var(--radius-control)] border border-warning-line bg-warning-soft p-4 text-[14px] text-ink">
+                <p className="font-semibold text-warning">Data is not being saved permanently</p>
+                <p className="mt-1 text-ink-2">
+                  The server is using a temporary SQLite file. The host wipes it on every restart or redeploy, so users, documents and
+                  applications disappear. Set <code className="font-mono text-[13px]">DATABASE_URL</code> on the backend to a PostgreSQL
+                  database (for example a free Neon database) and redeploy.
+                </p>
+              </div>
+            )}
             {error && <p role="alert" className="mb-4 rounded-[var(--radius-control)] border border-danger-line bg-danger-soft p-3 text-[14px] text-danger">{error}</p>}
             <Outlet />
           </main>

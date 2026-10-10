@@ -8,7 +8,7 @@ FormPilot has five parts to deploy:
 | --------------- | -------------------------------------- | ------------------------------------------------------------------------ |
 | Database        | PostgreSQL for app data                | Neon, Supabase, Render Postgres or Railway Postgres                      |
 | Vector database | Qdrant, for document embeddings (RAG)  | Qdrant Cloud                                                             |
-| Backend         | FastAPI (`backend/`)                 | Any Python host with a persistent disk: Render, Railway, Fly.io, or a VM |
+| Backend         | FastAPI (`backend/`)                 | Any Python host: Render, Railway, Fly.io, or a VM                        |
 | Frontend        | React static site (`frontend/`)      | Vercel or Netlify                                                        |
 | Extension       | Chrome/Edge extension (`extension/`) | Users' browsers (load unpacked, or the Chrome Web Store)                 |
 
@@ -20,7 +20,7 @@ Extension ────┘                                     ├──► Postg
                                                     ├──► Qdrant (vectors)
                                                     ├──► Groq (LLM)
                                                     ├──► Gmail SMTP (reset emails)
-                                                    └──► persistent disk (encrypted uploads)
+                                                    └──► (uploads are stored encrypted in PostgreSQL)
 ```
 
 **Serve the API under the app's own address.** The session cookie is `httpOnly` and `SameSite=Lax`. Browsers don't send it on `fetch` calls to a different site, so a frontend on `vercel.app` calling an API on `onrender.com` directly would appear logged out. Proxy `/api/*` through the frontend host (step 4) and leave `VITE_API_BASE_URL` empty.
@@ -45,7 +45,7 @@ Tables are created on the backend's first start, and new columns are added by `a
 2. Copy its URL (`https://<id>.<region>.cloud.qdrant.io:6333`) → `QDRANT_URL`.
 3. Create an API key → `QDRANT_API_KEY`.
 
-The `formpilot_passages` collection is created on the backend's first start. Without `QDRANT_URL`, Qdrant runs inside the backend and stores its data in `QDRANT_PATH`; put that on the persistent disk (`/var/data/qdrant`) and run a single instance.
+The `formpilot_passages` collection is created on the backend's first start. Set `QDRANT_URL` on Render: without it, Qdrant runs inside the backend and keeps its data on the server disk, which Render's free plan wipes on restart.
 
 ## 2. Secrets
 
@@ -78,7 +78,9 @@ Railway and Fly.io work the same way: a Python web service plus a persistent vol
    | Start command  | `python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"`    |
    | Instances      | 1 (rate limits are kept in memory)                                                                          |
    | Instance size  | 1 GB RAM or more (the embedding model needs about 300–500 MB)                                              |
-3. **Add a persistent disk** mounted at `/var/data` (1 GB is plenty to start). Uploaded files are stored there, encrypted. Without a disk they disappear on every redeploy, while their database rows remain.
+3. **Set `DATABASE_URL` to PostgreSQL. This is required.** Render's free plan wipes the server's disk on every restart, redeploy and wake-up from sleep. Without `DATABASE_URL`, the backend falls back to a SQLite file on that disk, so all users and data disappear (the admin panel shows a warning when this happens). Uploaded files are stored encrypted in the database too, so no persistent disk is needed.
+
+   Free option: create a project on [neon.tech](https://neon.tech), copy its connection string, change the prefix `postgresql://` to `postgresql+psycopg://`, and keep `?sslmode=require` at the end.
 4. **Environment variables:**
 
    ```env
@@ -91,8 +93,6 @@ Railway and Fly.io work the same way: a Python web service plus a persistent vol
    QDRANT_URL=https://<id>.<region>.cloud.qdrant.io:6333
    QDRANT_API_KEY=<key>
 
-   STORAGE_DIR=/var/data/storage
-   FASTEMBED_CACHE_PATH=/var/data/fastembed      # embedding model is downloaded once (~70 MB) and kept
 
    GROQ_API_KEY=<key>
    LLM_MODEL=openai/gpt-oss-120b
@@ -186,7 +186,7 @@ Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` on the backend. The **Continue
 - [ ] **Forgot password** sends an email, the link opens the reset page, and after the reset you sign in with the new password.
 - [ ] Open **Use Anywhere**: CareerHub fields are detected and filled.
 - [ ] Extension: connect it from `/extension`, open any site with a form, and Autofill.
-- [ ] Redeploy the backend: uploaded documents can still be opened (the persistent disk works).
+- [ ] Redeploy the backend: users and uploaded documents are still there (`DATABASE_URL` points to PostgreSQL).
 
 ## 9. Before a public launch
 
@@ -204,7 +204,7 @@ Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` on the backend. The **Continue
 | API won't start: "Missing required settings in production" | `SECRET_KEY`, `FILE_ENCRYPTION_KEY` or `COOKIE_SECURE=true` is missing.                           |
 | Every sign-in or save fails with 403 "Cross-site request refused" | `CORS_ORIGINS` (or `APP_URL`) on the backend doesn't include the site's address. Set both to `https://formpilot-six.vercel.app`. |
 | Redirect loop or "too many redirects"                      | `TRUST_PROXY_HEADERS` isn't `true` behind the host's proxy, so HTTPS requests look like HTTP.       |
-| Uploaded documents vanish after a redeploy                 | No persistent disk, or`STORAGE_DIR` isn't on it.                                                      |
+| Users, documents or applications vanish after a while     | `DATABASE_URL` isn't set, so data is in a SQLite file that Render wipes on restart. Set it to PostgreSQL. |
 | Instance restarts while processing an upload               | Out of memory: use 1 GB+ RAM or`EMBEDDING_PROVIDER=hash`.                                             |
 | "Email isn't set up yet" on Forgot password                | `SMTP_HOST` is empty, or the backend wasn't restarted after setting it.                               |
 | Extension: "Couldn't reach FormPilot"                      | Wrong app address in the popup settings, or permission for it wasn't granted.                           |

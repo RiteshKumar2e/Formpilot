@@ -68,7 +68,7 @@ def upload_document(
     doc = Document(user_id=user.id, filename=filename, content_type=content_type, size_bytes=len(data), storage_key="")
     db.add(doc)
     db.flush()
-    doc.storage_key = storage.save(user.id, doc.id, data)
+    doc.storage_key = storage.save(db, user.id, doc.id, data)
 
     ingest_document(db, doc, data, background)
     db.commit()
@@ -80,7 +80,7 @@ def download_document(document_id: str, user: User = Depends(get_current_user), 
     """The original file, decrypted for its owner (used to attach vault documents to external forms)."""
     doc = _owned_document(db, user, document_id)
     try:
-        data = storage.load(doc.storage_key)
+        data = storage.load(db, doc.storage_key)
     except (OSError, ValueError) as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "This file is no longer available.") from exc
     return Response(
@@ -100,7 +100,7 @@ def content_disposition(filename: str) -> str:
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_document(document_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Response:
     doc = _owned_document(db, user, document_id)
-    storage.delete(doc.storage_key)
+    storage.delete(db, doc.storage_key)
     vectorstore.delete_document(doc.id)
     db.delete(doc)
     db.commit()

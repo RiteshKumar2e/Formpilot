@@ -11,6 +11,8 @@ export interface User {
 
 export interface AdminOverview {
   database: string
+  /** False when production data sits in a SQLite file the host wipes on restart. */
+  persistent: boolean
   vector_store: { name: string; collection: string; points: number | null; error: string | null }
   totals: {
     users: number

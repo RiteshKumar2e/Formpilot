@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -12,11 +13,15 @@ from .services import vectorstore
 from .routers import admin, applications, auth, contact, documents, extension, integrations, profile, system, vault
 
 settings = get_settings()
+log = logging.getLogger("formpilot")
 settings.validate_for_production()
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    if settings.is_production and engine.dialect.name == "sqlite":
+        log.warning("DATABASE_URL is not set: data is kept in a SQLite file on this server's disk and is lost "
+                    "whenever the host restarts or redeploys. Set DATABASE_URL to a PostgreSQL database.")
     migrations.upgrade(engine)  # adds columns introduced after a database was created
     Base.metadata.create_all(bind=engine)
     admin_account.ensure_admin(engine)
